@@ -1,0 +1,4 @@
+# Block access from main domain
+RewriteEngine On
+RewriteCond %{HTTP_HOST} !^admin\.bbqstyle\.in$ [NC]
+RewriteRule ^(.*)$ - [F,L]

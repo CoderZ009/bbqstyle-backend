@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Success - BBQSTYLE</title>
+    <link rel="icon" type="image/x-icon" href="src/favicon.ico">
+    <link rel="stylesheet" href="css/master-theme.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 300px;
+        }
+        
+        .success-container {
+            background: #ffffff;
+            padding: 3rem;
+            border-radius: var(--radius-2xl);
+            text-align: center;
+            box-shadow: var(--shadow-xl);
+            max-width: 500px;
+            width: 90%;
+            border: 2px solid var(--accent-purple);
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--success) 0%, #10b981 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: white;
+            font-size: 40px;
+            animation: pulse 2s infinite;
+        }
+        
+        h1 {
+            color: #000000;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+        }
+        
+        .order-id {
+            background: var(--primary-light);
+            padding: 1rem;
+            border-radius: var(--radius-lg);
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--accent-purple);
+            border: 2px solid var(--accent-purple);
+        }
+        
+        .order-id strong {
+            color: #000000;
+            font-weight: 700;
+        }
+        
+        p {
+            color: #1a1a1a;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-pink) 100%);
+            color: #f9e5fd !important;
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: var(--radius-lg);
+            text-decoration: none;
+            font-weight: 600;
+            margin: 0.5rem;
+            display: inline-block;
+            transition: var(--transition-normal);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--medium-gray) 0%, var(--dark-gray) 100%);
+        }
+        
+        @media (max-width: 480px) {
+            .success-container {
+                padding: 30px 20px;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>    <script src="js/baseurl.js"></script>
+    <script src="js/auth-helper.js"></script>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">✓</div>
+        <h1>Order Placed Successfully!</h1>
+        
+        <div class="order-id">
+            <strong>Order ID: <span id="orderIdDisplay"></span></strong>
+        </div>
+        
+        <p>Thank you for your order! We have received your order and will process it shortly. You will receive a confirmation email with order details.</p>
+        
+        <div class="actions">
+            <a href="/collections.html" class="btn btn-primary">Continue Shopping</a>
+            <a href="/account.html?tab=orders" class="btn btn-secondary">View Orders</a>
+        </div>
+    </div>    <script src="js/baseurl.js"></script>
+    
+    <script>
+        // Get order ID from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('orderId');
+        
+        document.getElementById('orderIdDisplay').textContent = orderId || 'N/A';
+    </script>
+</body>
+</html>

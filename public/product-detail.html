@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Detail</title>
+        <link rel="icon" type="image/x-icon" href="src/favicon.ico">    <script src="js/baseurl.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/product-detail.css">    <script src="js/baseurl.js"></script>
+    <script src="js/product-detail.js"></script>    <script src="js/baseurl.js"></script>
+    <script src="js/headerall.js"></script>    <script src="js/baseurl.js"></script>
+    <script src="js/footer.js"></script>
+    <link rel="stylesheet" href="css/headerall.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">    <script src="js/baseurl.js"></script>
+    <script src="js/auth-helper.js"></script>
+</head>
+
+<body>
+    <!-- Header/Navigation -->
+    <header class="header" id="header">
+
+    </header>
+
+
+    <main class="container mx-auto py-8 px-6">
+
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <nav class="text-sm m-4">
+                <ol class="flex items-center space-x-2">
+                    <li><a href="/" class="text-blue-600 hover:text-blue-800">Home</a></li>
+                    <li><i class="fas fa-chevron-right text-gray-400 text-xs"></i></li>
+                    <li><a href="#" id="product-collection" class="text-blue-600 hover:text-blue-800">Collection</a>
+                    </li>
+                    <li><i class="fas fa-chevron-right text-gray-400 text-xs"></i></li>
+                    <li class="text-gray-500" id="product-name">Product Name</li>
+                </ol>
+            </nav>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 p-6">
+                <!-- Product Gallery -->
+                <div class="product-gallery grid gap-4">
+                    <!-- Multi-color thumbnails -->
+                    <div class="thumbnails flex flex-row md:flex-col gap-2">
+                    </div>
+                    <div class="main-image-container">
+                        <img src="https://via.placeholder.com/400x400?text=Loading..."
+                            alt="Full display of Premium Cotton T-Shirt on a model with clean white background"
+                            class="main-image w-full">
+                    </div>
+                </div>
+
+                <!-- Product Details -->
+                <div class="product-details">
+
+
+                    <h1 id="product-name" class="text-3xl font-bold mb-2">Product Title</h1>
+                    <div id="review-summary" class="flex items-center mb-4">
+                    </div>
+                    <div class="text-2xl font-bold mb-4">₹0.00</div>
+
+                    <!-- Variant Options -->
+                    <div id="variant-options-container">
+                        <!-- Color and Size options will be dynamically inserted here by JavaScript -->
+                    </div>
+                    
+
+
+                    <!-- Size Selection -->
+                    <div id="size-selection-container" class="mb-6" style="display: none;">
+                        <h3 class="font-bold mb-2">Size</h3>
+                        <select id="size-selector" class="border border-gray-300 rounded px-3 py-2 w-full">
+                            <option value="">Select Size</option>
+                        </select>
+                    </div>
+
+                    <!-- Quantity -->
+                    <div class="mb-6">
+                        <h3 class="font-bold mb-2">Quantity</h3>
+                        <div class="flex items-center">
+                            <button class="quantity-selector" id="decrease-qty">-</button>
+                            <span class="quantity-selector text-center mx-1" id="quantity">1</span>
+                            <button class="quantity-selector" id="increase-qty">+</button>
+                        </div>
+                    </div>
+
+
+                    <!-- Icons Section -->
+                    <div class="product-icons flex flex-wrap gap-7 mb-6 text-gray-700 p-4 bg-blue-100 rounded-lg">
+                        <div class="icon-item flex items-center gap-2">
+                            <i class="fas fa-lock text-xl text-green-600"></i>
+                            <span>Secure Payment</span>
+                        </div>
+                        <div class="icon-item flex items-center gap-2">
+                            <i class="fas fa-truck text-xl text-blue-600"></i>
+                            <span>Free Delivery</span>
+                        </div>
+                        <div class="icon-item flex items-center gap-2">
+                            <i class="fas fa-fire text-xl text-red-600"></i>
+                            <span>Trending</span>
+                        </div>
+                        <a href="shipping-returns.html">
+                            <div class="icon-item flex items-center gap-2">
+                                <i class="fas fa-undo text-xl text-yellow-600"></i>
+                                <span>Check Return Policy</span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap gap-3 mb-6">
+                        <button id="add-to-cart-btn" class="cart-btn" data-product-id="" data-product-title="">
+                            <span class="cart-btn-text">Add to Cart</span> <i class="t fas fa-shopping-cart text-white"></i>
+                        </button>
+                        <button id="buy-now-btn"
+                            class="border border-black py-3 px-8 font-bold hover:bg-gray-50 transition flex-1 md:flex-none">
+                            Buy Now
+                        </button>
+                    </div>
+
+                    <!-- Wishlist Button -->
+                    <button id="add-to-wishlist-btn" class="flex items-center text-gray-700 hover:text-black mb-8">
+                        <i class="far fa-heart mr-2"></i>
+                        <span>Add to Wishlist</span>
+                    </button>
+                    <!-- Product Meta Information -->
+                    <div class="product-meta mb-4 space-y-1">
+                        <p class="text-sm text-black">Availability: <span id="product-availability"
+                                class="font-medium text-green-600">In Stock</span></p>
+                        <p class="text-sm text-black">Brand: <span class="text-gray-700">BBQSTYLE</span></a></p>
+                        <p class="text-sm text-black">Collection: <a href="#" id="product-meta-collection"
+                                class="text-blue-600 hover:text-blue-800"></a></p>
+                        <p class="text-sm text-black">Category: <span id="product-category"
+                                class="text-gray-700"></span></p>
+                    </div>
+
+                    <!-- Product Description -->
+                    <div class="col-span-full mb-8 px-6 py-4 bg-gray-50 my-6">
+                        <h3 class="text-xl font-bold mb-4">Product Description</h3>
+                        <p id="product-description-text" class="text-gray-700 mb-4"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reviews Section -->
+            <div class="border-t border-gray-200 p-6">
+                <h2 class="text-2xl font-bold mb-6">Customer Reviews</h2>
+
+                <!-- Review Summary -->
+                <div class="review-summary flex flex-col md:flex-row items-start md:items-center justify-between mb-8">
+                </div>
+
+                <!-- Review Form -->
+                <div id="review-form-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-8">
+                    <h3 class="text-xl font-bold mb-4">Write a Review</h3>
+                    <form id="review-form">
+                        <input type="hidden" id="review-product-id">
+                        <div class="mb-4">
+                            <label for="review-customer-name" class="block text-gray-700 text-sm font-bold mb-2">Your
+                                Name:</label>
+                            <input type="text" id="review-customer-name"
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="review-stars" class="block text-gray-700 text-sm font-bold mb-2">Rating:</label>
+                            <select id="review-stars"
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                required>
+                                <option value="">Select a rating</option>
+                                <option value="1">1 Star</option>
+                                <option value="2">2 Stars</option>
+                                <option value="3">3 Stars</option>
+                                <option value="4">4 Stars</option>
+                                <option value="5">5 Stars</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="review-text" class="block text-gray-700 text-sm font-bold mb-2">Your
+                                Review:</label>
+                            <textarea id="review-text"
+                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline h-32"
+                                required></textarea>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button type="submit"
+                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Submit
+                                Review</button>
+                            <button type="button" id="cancel-review-btn"
+                                class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+
+
+
+                <!-- Review Filters -->
+                <div id="review-filters" class="flex flex-wrap gap-2 mb-8">
+                </div>
+            </div>
+            <!-- Reviews List -->
+            <div id="reviews-list" class="py-6 px-6">
+                <!-- Reviews will be dynamically loaded here -->
+            </div>
+
+            <!-- Pagination -->
+            <div id="reviews-pagination" class="flex justify-center mt-6 space-x-2">
+            </div>
+
+        </div>
+        </div>
+    </main>
+    </section>
+
+    <!-- Footer -->
+    <footer id="footer" class="bg-gray-800 text-white pt-12 pb-6">
+    </footer>
+</body>
+
+</html>

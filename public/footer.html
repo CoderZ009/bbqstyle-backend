@@ -1,0 +1,103 @@
+<link rel="stylesheet" href="css/footer.css">
+<footer>
+<div class="container mx-auto px-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+        <div>
+            <a href="/"> <h3 class="text-2xl font-bold mb-4">BBQSTYLE</h3></a>
+            <p id="desb" class="mb-4">Premium ethnic and contemporary fashion for women and men.
+                Quality you
+                can trust, styles you'll love.</p>
+            <div id="fl" class="flex space-x-4">
+                <a href="https://www.facebook.com/p/Blueberry-Boutique-100060582687323/" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                <a href="https://www.instagram.com/blueberryboutique_/" target="_blank"><i class="fab fa-instagram"></i></a>
+                <a href="https://www.youtube.com/@BlueberryBoutique" target="_blank"><i class="fab fa-youtube"></i></a>
+                <a href="https://wa.me/918901551059" target="_blank"><i class="fab fa-whatsapp"></i></a>
+            </div>
+        </div>
+
+        <div class="ql">
+            <h4 class="font-bold text-lg mb-4">Quick Links</h4>
+            <ul class="space-y-2">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="about-us.html">About Us</a></li>
+                <li><a href="collections.html">Collections</a></li>
+                <li><a href="contact-us.html">Contact Us</a></li>
+                <li><a href="order-tracking.html">Order Tracking</a></li>
+            </ul>
+        </div>
+
+        <div>
+            <h4 class="font-bold text-lg mb-4">Our Policies</h4>
+            <ul class="space-y-2">
+                <li><a href="shipping-returns.html">Shipping & Returns</a>
+                </li>
+                <li><a href="privacy-policy.html">Privacy Policy</a></li>
+                <li><a href="terms-conditions.html">Terms & Conditions</a></li>
+            </ul>
+        </div>
+
+        <div>
+            <h4 class="font-bold text-lg mb-4">Contact Info</h4>
+            <ul class="space-y-2">
+                <li class="flex items-start">
+                    <i class="fas fa-map-marker-alt mr-3 mt-1"></i>
+                    <span>Karan Vihar, Karnal, Haryana-132001</span>
+                </li>
+                <li class="flex items-center">
+                    <i class="fas fa-phone-alt mr-3"></i>
+                    <a href="tel:+918901551059"><span>+91 8901551059</span> </a>
+                </li>
+                <li class="flex items-center">
+                    <i class="fas fa-envelope mr-3"></i>
+                    <a href="mailto:support@bbqstyle.in"><span>support@bbqstyle.in</span></a>
+                </li>
+                <li class="flex items-center">
+                    <i class="fas fa-clock mr-3"></i>
+                    <span>Mon-Sat: 10AM - 7PM</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="border-t pt-6 text-center">
+        <p>© <span id="y"></span> BBQSTYLE All rights reserved.</p>
+    </div>
+</div>
+</footer>
+
+<!-- Floating Chat Button -->
+<div id="chatWidget" style="position: fixed; bottom: 5px; right: 5px; z-index: 9999; font-family: Arial, sans-serif;">
+    <!-- Chat Button -->
+    <div id="chatButton" style="width: 60px; height: 60px; background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4); transition: all 0.3s ease; margin-bottom: 10px;">
+        <i class="fas fa-comments" style="color: white; font-size: 28px;"></i>
+    </div>
+    
+    <!-- Chat Form -->
+    <div id="chatForm" style="display: none; width: 320px; max-width: calc(100vw - 20px); background: white; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); overflow: hidden; margin-bottom: 10px;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #25D366, #128C7E); padding: 16px; color: white;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Have any query? Ask!</h3>
+                <button id="closeChat" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">&times;</button>
+            </div>
+        </div>
+        
+        <!-- Input Section -->
+        <div style="padding: 20px;">
+            <div style="display: flex; align-items: center; background: #f8f9fa; border-radius: 25px; padding: 8px 16px; border: 2px solid #e9ecef; min-height: 52px;">
+                <input type="text" id="chatMessage" placeholder="Type your message..." style="flex: 1; border: none; background: none; outline: none !important; padding: 8px 0; font-size: 14px; color: #333; min-width: 0;">
+                <button id="sendMessage" style="background: #25D366; border: none; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-left: 8px; transition: all 0.2s ease; flex-shrink: 0;">
+                    <i class="fas fa-paper-plane" style="color: white; font-size: 14px;"></i>
+                </button>
+            </div>
+            <p style="margin: 12px 0 0 0; font-size: 12px; color: #666; text-align: center;">We'll respond as soon as possible!</p>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+</style>

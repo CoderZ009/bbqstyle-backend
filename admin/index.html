@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>BBQSTYLE Admin Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="https://bbqstyle.in/src/favicon.ico">
+    <link rel="stylesheet" href="css/admin.css" />
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth-helper.js?v=655463792"></script>
+    <script src="js/admin.js?v=20"></script>
+</head>
+
+<body>
+    <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <div id="login-container">
+        <h2>Admin Login</h2>
+        <form id="login-form">
+            <label for="email">Email:</label>
+            <input type="email" id="email" required />
+            <label for="password">Password:</label>
+            <input type="password" id="password" required />
+            <button type="submit">Login</button>
+        </form>
+        <div id="login-error" style="color:red; display:none; margin-top: 15px;"></div>
+    </div>
+
+    <div id="dashboard" style="display:none;">
+        <nav id="sidebar">
+            <div id="admin-header">
+                <a href="index.html">
+                    <h1>BBQSTYLE Admin</h1>
+                </a>
+            </div>
+            <ul id="tabs">
+                <li data-tab="dashboardd" class="active">Dashboard</li>
+                <li data-tab="products">Products</li>
+                <li data-tab="categories">Categories</li>
+                <li data-tab="collections">Collections</li>
+                <li data-tab="orders">Orders</li>
+                <li data-tab="users">Users</li>
+                <li data-tab="reviews">Reviews</li>
+                <li data-tab="offers">Offers</li>
+                <li data-tab="subscribers">Subscribers</li>
+                <li data-tab="settings">Settings</li>
+                <li id="logout-btn">Logout</li>
+            </ul>
+        </nav>
+
+        <div id="sidebarm" style="display: none;">
+            <h1 id="ad">Admin Dashboard</h1>
+            <button id="mobile-menu-button" class="hidden text-gray-600">
+                <i class="fas fa-bars text-3xl"></i>
+            </button>
+            <nav>
+                <ul id="tabsm">
+                    <li data-tab="products" class="active">Products</li>
+                    <li data-tab="categories">Categories</li>
+                    <li data-tab="orders">Orders</li>
+                    <li data-tab="customers">Customers</li>
+                    <li data-tab="reviews">Reviews</li>
+                    <li data-tab="subscribers">Subscribers</li>
+                    <li data-tab="settings">Settings</li>
+                    <li id="logout-btn">Logout</li>
+                </ul>
+            </nav>
+        </div>
+        <section id="dashboardd" class="tab-content active">
+            <h2>Dashboard</h2>
+            <div class="loading-bar" id="dashboard-loading">
+                <div class="loading-line"></div>
+            </div>
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <h3>Live Visitors</h3>
+                    <div class="stat-number" id="live-visitors">0</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Today's Sales</h3>
+                    <div class="stat-number" id="today-sales">₹0</div>
+                    <div class="stat-label">Total Revenue</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Pending Orders</h3>
+                    <div class="stat-number" id="pending-orders">0</div>
+                    <div class="stat-label">Need Action</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Products</h3>
+                    <div class="stat-number" id="total-products">0</div>
+                    <div class="stat-label">In Inventory</div>
+                </div>
+            </div>
+            <div class="pending-orders-section">
+                <h3>Pending Orders</h3>
+                <div class="loading-bar" id="pending-orders-loading">
+                    <div class="loading-line"></div>
+                </div>
+                <div class="table-container">
+                    <table id="pending-orders-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="products" class="tab-content">
+            <h2>Products</h2>
+            <button id="add-product-btn">Add Product</button> <!-- Moved here -->
+            <div>
+                <input type="text" id="product-search" placeholder="Search products..." />
+            </div>
+            <div>
+                <label for="product-category-filter">Filter:</label>
+                <select id="product-category-filter">
+                    <option value="">All Categories</option>
+                </select>
+                <select id="product-collection-filter">
+                    <option value="">All Collections</option>
+                </select>
+            </div>
+            <div class="loading-bar" id="products-loading">
+                <div class="loading-line"></div>
+            </div>
+            <div class="table-container">
+                <table id="products-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>SKU</th>
+                            <th>Price</th>
+                            <th>MRP</th>
+                            <th>Description</th>
+                            <th>Colors</th>
+                            <th>Sizes</th>
+
+                            <th>Category</th>
+                            <th>Collection</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="products-pagination"></div>
+            <div id="product-form-container" style="display:none;">
+                <h3 id="product-form-title">Add Product</h3>
+                <form id="product-form" enctype="multipart/form-data"
+                    style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; align-items: end;">
+                    <input type="hidden" id="product-id" />
+                    <label>Title: <input type="text" id="product-title" required /></label>
+                    <label>SKU: <input type="text" id="product-sku" required /></label>
+                    <label>Price: <input type="number" id="product-price" step="0.01" required /></label>
+                    <label>MRP: <input type="number" id="product-mrp" step="0.01" /></label>
+                    <label>HSN Code: <input type="text" id="product-hsn" /></label>
+                    <label>Weight (kg): <input type="number" id="product-weight" step="0.01" /></label>
+                    <label>Category:
+                        <select id="product-category" required>
+                            <option value="">Select Category</option>
+                        </select>
+                    </label>
+                    <label>Collection:
+                        <select id="product-collection" required>
+                            <option value="">Select Collection</option>
+                        </select>
+                    </label>
+                    <label>Has Variants:
+                        <select id="has-variants">
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                        </select>
+                    </label>
+                    <div id="variant-type-container" style="display: none;">
+                        <label>Color Variant:
+                            <select id="color-variant">
+                                <option value="no">No</option>
+                                <option value="yes">Yes</option>
+                            </select>
+                        </label>
+                        <label>Size Variant:
+                            <select id="size-variant">
+                                <option value="no">No</option>
+                                <option value="yes">Yes</option>
+                            </select>
+                        </label>
+                    </div>
+                    <label style="grid-column: 1 / -1;">Description:
+                        <div id="product-description" style="height: 150px;"></div>
+                    </label>
+                    <div id="no-variant-container" style="grid-column: 1 / -1;">
+                        <label>Stock: <input type="number" id="product-stock" min="0" value="0"
+                                style="width: fit-content;" /></label>
+                        <label>Product Images: <input type="file" id="product-images" multiple
+                                accept="image/*" /></label>
+                    </div>
+                    <div id="color-only-container" style="grid-column: 1 / -1; display: none;">
+                        <label>Colors: <input type="text" id="product-colors-only"
+                                placeholder="Blue, Pink, Red" /></label>
+                        <div id="color-only-fields"></div>
+                    </div>
+                    <div id="size-only-container" style="grid-column: 1 / -1; display: none;">
+                        <label>Sizes: <input type="text" id="product-sizes-only" placeholder="S, M, L, XL" /></label>
+                        <label>Product Images: <input type="file" id="size-images" multiple accept="image/*" /></label>
+                        <div id="size-only-fields"></div>
+                    </div>
+                    <div id="color-size-container" style="grid-column: 1 / -1; display: none;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <label>Colors: <input type="text" id="product-colors"
+                                    placeholder="Blue, Pink, Red" /></label>
+                            <label>Sizes: <input type="text" id="product-sizes" placeholder="S, M, L, XL" /></label>
+                        </div>
+                        <div id="color-variant-images-container">
+                            <label>Color Images & Stock:</label>
+                            <div id="color-variant-fields"></div>
+                        </div>
+                    </div>
+                    <div style="grid-column: 1 / -1; text-align: center;">
+                        <button type="submit" id="save-product-btn">Save Product</button>
+                        <button type="button" id="cancel-product-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section id="categories" class="tab-content">
+            <h2>Categories</h2>
+            <button id="add-category-btn">Add Category</button> <!-- Moved here -->
+            <div>
+
+                <input type="text" id="category-search" placeholder="Search categories..." />
+                <label for="category-collection-filter">Filter:</label>
+                <select id="category-collection-filter">
+                    <option value="">All Collections</option>
+                </select>
+            </div>
+            <div class="loading-bar" id="categories-loading">
+                <div class="loading-line"></div>
+            </div>
+            <div class="table-container">
+                <table id="categories-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Image</th>
+                            <th>Collection</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="categories-pagination" class="pagination"></div>
+            <div id="category-form-container" style="display:none;">
+                <h3 id="category-form-title">Add Category</h3>
+                <form id="category-form" enctype="multipart/form-data">
+                    <input type="hidden" id="category-id" />
+                    <label>Name: <input type="text" id="category-name" required /></label><br />
+                    <label>Description:<br />
+                        <textarea id="category-description"></textarea>
+                    </label><br />
+                    <label>Collection:
+                        <select id="category-collection" required>
+                            <option value="">Select Collection</option>
+                        </select>
+                    </label><br />
+                    <label>Image: <input type="file" id="category-image" /></label><br />
+                    <button type="submit" id="save-category-btn">Save Category</button>
+                    <button type="button" id="cancel-category-btn">Cancel</button>
+                </form>
+            </div>
+        </section>
+        <section id="collections" class="tab-content">
+            <h2>Collections</h2>
+            <button id="add-collection-btn">Add Collection</button> <!-- Moved here -->
+            <div>
+                <input type="text" id="collection-search" placeholder="Search collections..." />
+            </div>
+            <div class="loading-bar" id="collections-loading">
+                <div class="loading-line"></div>
+            </div>
+            <div class="table-container">
+                <table id="collections-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Image</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="collections-pagination" class="pagination"></div>
+            <div id="collection-form-container" style="display:none;">
+                <h3 id="collection-form-title">Add Collection</h3>
+                <form id="collection-form" enctype="multipart/form-data">
+                    <input type="hidden" id="collection-id" />
+                    <label>Name: <input type="text" id="collection-name" required /></label><br />
+                    <label>Description:<br />
+                        <textarea id="collection-description"></textarea>
+                    </label><br />
+                    <label>Image: <input type="file" id="collection-image" /></label><br />
+                    <button type="submit" id="save-collection-btn">Save Collection</button>
+                    <button type="button" id="cancel-collection-btn">Cancel</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="orders" class="tab-content">
+            <h2>Orders</h2>
+            <div>
+                <input type="text" id="order-search" placeholder="Search orders..." />
+                <label for="order-status-filter">Status:</label>
+                <select id="order-status-filter">
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="processing">Processing</option>
+                    <option value="ready">Ready</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+                <label for="order-date-filter">Date:</label>
+                <select id="order-date-filter">
+                    <option value="">All</option>
+                    <option value="recent">Recent</option>
+                    <option value="old">Old</option>
+                </select>
+                <label for="order-payment-filter">Payment:</label>
+                <select id="order-payment-filter">
+                    <option value="">All Payment</option>
+                    <option value="COD">COD</option>
+                    <option value="Online">Online</option>
+                </select>
+            </div>
+            <div class="loading-bar" id="orders-loading">
+                <div class="loading-line"></div>
+            </div>
+            <div class="table-container">
+                <table id="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer Name</th>
+                            <th>Address</th>
+                            <th>Total Amount</th>
+                            <th>Payment Mode</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                            <th>Order Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="orders-pagination" class="pagination"></div>
+            <div id="order-items-container" style="display:none;">
+                <h3>Order Items for Customer: <span id="order-items-customer"></span></h3>
+                <div class="table-container">
+                    <table id="order-items-table">
+                        <thead>
+                            <tr>
+                                <th>Image</th>
+                                <th>Product</th>
+                                <th>Variant Type</th>
+                                <th>Variant Detail</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <button id="close-order-items-btn">Close</button>
+            </div>
+            <div id="tracking-form-container" style="display:none;">
+                <h3 id="tracking-form-title">Add Tracking</h3>
+                <form id="tracking-form">
+                    <input type="hidden" id="tracking-order-id" />
+                    <label>Tracking ID: <input type="text" id="tracking-id" required /></label><br />
+                    <label>Tracking Link: <input type="text" id="tracking-link" /></label><br />
+                    <label>Carrier: 
+                        <select id="tracking-carrier">
+                            <option value="">Select Carrier</option>
+                            <option value="amazon">Amazon</option>
+                            <option value="xpressbees">XpressBees</option>
+                            <option value="shiprocket">Shiprocket</option>
+                        </select>
+                    </label><br />
+                    <button type="submit">Save Tracking</button>
+                    <button type="button" id="cancel-tracking-btn">Cancel</button>
+                </form>
+            </div>
+            <div id="customer-address-container" style="display:none;">
+                <h3>Customer Address</h3>
+                <div id="address-fields"></div>
+                <button id="close-address-btn">Close</button>
+            </div>
+        </section>
+
+        <section id="users" class="tab-content">
+            <h2>Users</h2>
+            <div>
+                <input type="text" id="user-search" placeholder="Search users..." />
+            </div>
+            <div class="loading-bar" id="users-loading">
+                <div class="loading-line"></div>
+            </div>
+            <div class="table-container">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Mobile</th>
+                            <th>Orders</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="users-pagination" class="pagination"></div>
+            <div id="user-orders-container" style="display:none;">
+                <h3>Orders for User <span id="user-orders-name"></span></h3>
+                <div class="table-container">
+                    <table id="user-orders-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <button id="close-user-orders-btn">Close</button>
+            </div>
+            <div id="user-order-items-container" style="display:none;">
+                <h3>Order Items for Customer: <span id="user-order-items-customer"></span></h3>
+                <div class="table-container">
+                    <table id="user-order-items-table">
+                        <thead>
+                            <tr>
+                                <th>Image</th>
+                                <th>Product</th>
+                                <th>Variant Type</th>
+                                <th>Variant Detail</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <button id="close-user-order-items-btn">Close</button>
+            </div>
+        </section>
+
+        <section id="settings" class="tab-content">
+            <h2>Settings</h2>
+            <div id="favicon-section">
+                <h3>Favicon</h3>
+                <div id="current-favicon-container">
+                    <label>Current:</label>
+                    <img id="current-favicon-preview" src="https://bbqstyle.in/src/favicon.ico" alt="Current Favicon" width="50"
+                        height="50">
+                </div>
+                <form id="settings-form" enctype="multipart/form-data">
+                    <label>Upload: <input type="file" id="favicon-input"
+                            accept=".ico,image/x-icon,image/png,image/jpg,image/jpeg,image/gif" /></label>
+                    <button type="submit" id="save-settings-btn">Update</button>
+                </form>
+            </div>
+
+            <h3>Slideshow</h3>
+            <button id="add-slide-btn">Add Slide</button>
+            <div class="loading-bar" id="slideshow-loading">
+                <div class="loading-line"></div>
+            </div>
+            <div class="table-container">
+                <table id="slideshow-table">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Heading</th>
+                            <th>Description</th>
+                            <th>Image</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div id="slide-form-container" style="display:none;">
+                <h3 id="slide-form-title">Add Slide</h3>
+                <form id="slide-form" enctype="multipart/form-data">
+                    <input type="hidden" id="slide-id" />
+                    <label>Heading: <input type="text" id="slide-heading" required /></label><br />
+                    <label>Description:<br />
+                        <textarea id="slide-description" required></textarea>
+                    </label><br />
+                    <label>Order: <input type="number" id="slide-order" min="1" required /></label><br />
+                    <label>Status:
+                        <select id="slide-status" required>
+                            <option value="1">Published</option>
+                            <option value="0">Draft</option>
+                        </select>
+                    </label><br />
+                    <label>Image: <input type="file" id="slide-image" accept="image/*" /></label><br />
+                    <button type="submit" id="save-slide-btn">Save Slide</button>
+                    <button type="button" id="cancel-slide-btn">Cancel</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="reviews" class="tab-content">
+            <h2>Reviews</h2>
+            <button id="add-review-btn">Add Review</button> <!-- Moved here -->
+            <div>
+                <input type="text" id="review-search" placeholder="Search reviews..." />
+                <label for="review-star-filter">Filter:</label>
+                <select id="review-star-filter">
+                    <option value="">All</option>
+                    <option value="1">1 Star</option>
+                    <option value="2">2 Stars</option>
+                    <option value="3">3 Stars</option>
+                    <option value="4">4 Stars</option>
+                    <option value="5">5 Stars</option>
+                </select>
+            </div>
+            <div class="loading-bar" id="reviews-loading">
+                <div class="loading-line"></div>
+            </div>
+            <div class="table-container">
+                <table id="reviews-table">
+                    <thead>
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>Product ID</th>
+                            <th>Review</th>
+                            <th>Stars</th>
+                            <th>Publish Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="reviews-pagination" class="pagination"></div>
+            <div id="review-form-container" style="display:none;">
+                <h3 id="review-form-title">Add Review</h3>
+                <form id="review-form">
+                    <input type="hidden" id="review-id" />
+                    <label>Customer Name: <input type="text" id="review-customer-name" required /></label><br />
+                    <label>Product ID: <input type="number" id="review-product-id" required /></label><br />
+                    <label>Review:<br />
+                        <textarea id="review-text" required></textarea>
+                    </label><br />
+                    <label>Stars:
+                        <select id="review-stars" required>
+                            <option value="">Select Stars</option>
+                            <option value="1">1 Star</option>
+                            <option value="2">2 Stars</option>
+                            <option value="3">3 Stars</option>
+                            <option value="4">4 Stars</option>
+                            <option value="5">5 Stars</option>
+                        </select>
+                    </label><br />
+                    <label>Publish:
+                        <input type="checkbox" id="review-publish" />
+                    </label><br />
+                    <button type="submit" id="save-review-btn">Save Review</button>
+                    <button type="button" id="cancel-review-btn">Cancel</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="offers" class="tab-content">
+            <h2>Offers</h2>
+            <button id="add-offer-btn">Add Offer</button>
+            <div>
+                <input type="text" id="offer-search" placeholder="Search offers..." />
+            </div>
+            <div class="loading-bar" id="offers-loading">
+                <div class="loading-line"></div>
+            </div>
+            <div class="table-container">
+                <table id="offers-table">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Used</th>
+                            <th>Limit</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="offers-pagination" class="pagination"></div>
+            <div id="offer-form-container" style="display:none;">
+                <h3 id="offer-form-title">Add Offer</h3>
+                <form id="offer-form">
+                    <input type="hidden" id="offer-id" />
+                    <label>Code: <input type="text" id="offer-code" required /></label><br />
+                    <label>Discount Type:
+                        <select id="offer-discount-type" required>
+                            <option value="">Select Type</option>
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="value">Fixed Value (₹)</option>
+                        </select>
+                    </label><br />
+                    <label>Discount Value: <input type="number" id="offer-discount-value" step="0.01"
+                            required /></label><br />
+                    <label>Usage Limit: <input type="number" id="offer-limit" required /></label><br />
+                    <label>Status:
+                        <select id="offer-status" required>
+                            <option value="true">Enabled</option>
+                            <option value="false">Disabled</option>
+                        </select>
+                    </label><br />
+                    <button type="submit" id="save-offer-btn">Save Offer</button>
+                    <button type="button" id="cancel-offer-btn">Cancel</button>
+                </form>
+            </div>
+            <div id="offer-users-container" style="display:none;">
+                <h3>Users who used offer: <span id="offer-users-code"></span></h3>
+                <table id="offer-users-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Used At</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <button id="close-offer-users-btn">Close</button>
+            </div>
+        </section>
+
+        <section id="subscribers" class="tab-content">
+            <h2>Subscribers</h2>
+            <div>
+                <input type="text" id="subscriber-search" placeholder="Search subscribers..." />
+            </div>
+            <div class="loading-bar" id="subscribers-loading">
+                <div class="loading-line"></div>
+            </div>
+            <div class="table-container">
+                <table id="subscribers-table">
+                    <thead>
+                        <tr>
+                            <th>Sr No</th>
+                            <th>Customer Name</th>
+                            <th>Email ID</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="subscribers-pagination" class="pagination"></div>
+        </section>
+    </div>
+
+</body>
+
+</html>

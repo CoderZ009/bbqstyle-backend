@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Success - BBQSTYLE</title>
+    <link rel="icon" type="image/x-icon" href="src/favicon.ico">
+    <link rel="stylesheet" href="css/master-theme.css">
+    <style>
+        body {
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Poppins', sans-serif;
+        }
+        .success-container {
+            background: #ffffff;
+            padding: 3rem;
+            border-radius: var(--radius-2xl);
+            text-align: center;
+            box-shadow: var(--shadow-xl);
+            max-width: 500px;
+            width: 90%;
+            border: 2px solid var(--accent-purple);
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--success) 0%, #10b981 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: white;
+            font-size: 40px;
+            animation: pulse 2s infinite;
+        }
+        h1 {
+            color: #000000;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+        }
+        p {
+            color: #1a1a1a;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+        .btn {
+            background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-pink) 100%);
+            color: #f9e5fd !important;
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: var(--radius-lg);
+            text-decoration: none;
+            font-weight: 600;
+            margin: 0.5rem;
+            display: inline-block;
+            transition: var(--transition-normal);
+            box-shadow: var(--shadow-md);
+        }
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-xl);
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--medium-gray) 0%, var(--dark-gray) 100%);
+        }
+    </style>    <script src="js/baseurl.js"></script>
+    <script src="js/auth-helper.js"></script>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">✓</div>
+        <h1>Payment Successful!</h1>
+        <p>Your order has been placed successfully. You will receive a confirmation email shortly.</p>
+        <div>
+            <a href="/account.html" class="btn">View Orders</a>
+            <a href="/collections.html" class="btn btn-secondary">Continue Shopping</a>
+        </div>
+    </div>
+</body>
+</html>

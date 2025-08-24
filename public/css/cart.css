@@ -1,0 +1,347 @@
+@import url('./master-theme.css');
+.cs{
+    color: white !important;
+}
+/* Cart specific theme variables */
+:root {
+    --primary: var(--primary-dark);
+    --secondary: var(--accent-purple);
+    --accent: var(--accent-pink);
+    --light: var(--primary-light);
+    --dark: var(--primary-dark);
+    --gray: var(--light-gray);
+    --success: var(--success);
+    --warning: var(--warning);
+    --danger: var(--error);
+}
+
+
+/* Header/Nav */
+header {
+    background-color: var(--primary);
+    color: white;
+    padding: 1rem 5%;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-family: 'Poppins', sans-serif;
+}
+
+.logo span {
+    color: var(--accent);
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s;
+    position: relative;
+    padding: 0.5rem 0;
+}
+
+.nav-links a:hover {
+    color: var(--accent);
+}
+
+.nav-links a.active:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    color: var(--accent);
+    background-color: var(--accent);
+    transform-origin: left;
+    animation: underline 0.3s ease-out forwards;
+}
+
+@keyframes underline {
+    0% {
+        transform: scaleX(0);
+    }
+
+    100% {
+        transform: scaleX(1);
+    }
+}
+
+.nav-icons {
+    display: flex;
+    gap: 1.5rem;
+}
+
+#mobile-menu {
+    justify-content: center;
+    border-radius: 10px;
+    background-color: var(--accent);
+    color: rgba(0, 0, 0, 0.708);
+    font-size: larger;
+}
+
+#mobile-menu-button {
+    display: none;
+    font-size: x-large;
+}
+
+.icon {
+    cursor: pointer;
+    transition: transform 0.3s;
+    font-size: large;
+    color: transparent;
+    -webkit-text-stroke: 1px white;
+}
+
+.icon:hover {
+    transform: translateY(-3px);
+}
+
+@media (max-width: 340px) {
+    #distax {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 768px) {
+    .nav-links {
+        display: none;
+    }
+
+    .nav-icons {
+        display: none;
+    }
+
+    #mobile-menu-button {
+        display: flex;
+    }
+
+    #cbg {
+        height: 350px;
+        overflow-y: scroll;
+    }
+}
+
+.tabs {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.tab-button {
+    background: #820378;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 0 5px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s;
+}
+
+.tab-button:hover {
+    background: #2ebd84;
+}
+
+.tab-button.active {
+    background: #044f23;
+}
+
+.tab-content {
+    display: none;
+    padding: 20px;
+    background: rgb(76, 169, 209);
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.collection-item {
+    margin-bottom: 20px;
+}
+
+h1,
+h2,
+h3 {
+    color: #333;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background: var(--primary-gradient);
+    color: var(--primary-dark);
+    animation: fadeInUp 0.6s ease-out;
+}
+
+main {
+    padding: 30px;
+    background: linear-gradient(135deg, var(--white) 0%, var(--primary-light) 100%);
+    max-width: 900px;
+    margin: 20px auto;
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-xl);
+    border: 2px solid var(--primary-light);
+    position: relative;
+    overflow: hidden;
+}
+
+main::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at top right, rgba(107, 70, 193, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+h1,
+h2 {
+    color: #333;
+}
+
+.account-section {
+    display: flex;
+    justify-content: center;
+}
+
+#fl {
+    justify-content: center;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    color: #333;
+    line-height: 1.6;
+}
+
+h4,
+h5,
+h6 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 600;
+}
+
+.hero-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/d754194f-dc9f-437e-8262-5f7da5e32557.png') no-repeat center center;
+    background-size: cover;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.transition-all {
+    transition: all 0.3s ease;
+}
+
+
+.h5 {
+    font-size: 50px;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+
+.transition-all {
+    transition: all 0.3s ease;
+}
+
+.item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state {
+    background-color: #f8f9fa;
+    border: 2px dashed #e0e0e0;
+}
+
+.cart-total {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+    border-radius: 12px;
+}
+
+.discount-badge {
+    background: linear-gradient(to right, #ff416c, #ff4b2b);
+}
+
+.quantity-btn {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    outline: none;
+}
+
+.quantity-btn:focus {
+    outline: none;
+    border: none;
+}
+
+button:focus {
+    outline: none;
+}
+
+.remove-btn:focus {
+    outline: none;
+}
+
+
+
+.page-content.active {
+    display: block;
+}
+
+/* Toast Notification */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    background: #333;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.toast a {
+    color: #4CAF50;
+    text-decoration: underline;
+    margin-left: 8px;
+}

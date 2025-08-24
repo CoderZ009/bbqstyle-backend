@@ -1,0 +1,44 @@
+{
+  "name": "bbqstyle",
+  "version": "1.0.0",
+  "description": "India's Clothing Store",
+  "license": "ISC",
+  "author": "Blueberry Boutique",
+  "type": "commonjs",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "build": "npm install",
+    "webhook": "node shiprocket_webhook.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": "18.x",
+    "npm": "9.x"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "basic-ftp": "^5.0.5",
+    "bcrypt": "^6.0.0",
+    "body-parser": "^2.2.0",
+    "cashfree-pg": "^5.0.8",
+    "cashfree-pg-sdk-javascript": "^2.0.8",
+    "connect-session-sequelize": "^8.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^4.18.0",
+    "express-session": "^1.18.2",
+    "fs": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "mysql": "^2.18.1",
+    "mysql2": "^3.14.3",
+    "nodemon": "^3.1.10",
+    "path": "^0.12.7",
+    "sequelize": "^6.37.7",
+    "util": "^0.12.5",
+    "uuid": "^11.1.0"
+  }
+}

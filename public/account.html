@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>My Account</title>
+    <link rel="icon" type="image/x-icon" href="src/favicon.ico">
+    <link rel="stylesheet" href="css/account.css">    <script src="js/baseurl.js"></script>
+    <script src="js/preloader.js"></script>    <script src="js/baseurl.js"></script>
+    <script src="js/account.js?v=232"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Poppins:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">    <script src="js/baseurl.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>    <script src="js/baseurl.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>    <script src="js/baseurl.js"></script>
+    <script src="js/config.js"></script>    <script src="js/baseurl.js"></script>
+    <script src="js/headerall.js"></script>    <script src="js/baseurl.js"></script>
+    <script src="js/footer.js"></script>
+    <link rel="stylesheet" href="css/headerall.css">    <script src="js/baseurl.js"></script>
+    <script src="js/auth-helper.js"></script>
+</head>
+
+<body>
+    <!-- Header/Navigation -->
+    <header class="header" id="header">
+        
+    </header>
+
+    <main>
+        <section class="account-section">
+            <div class="container">
+                <!-- Login/Signup Toggle -->
+                <div class="auth-toggle">
+                    <button class="auth-toggle-btn active" id="login-btn">Login</button>
+                    <button class="auth-toggle-btn" id="register-btn">Register</button>
+                </div>
+
+                <!-- Login Form -->
+                <div class="auth-container" id="login-container">
+                    <h2 class="form-title">Welcome Back</h2>
+                    <div class="divider">Login with your mobile number</div>
+                    
+                    <!-- Mobile Number Input -->
+                    <div id="mobile-input-section">
+                        <div class="form-group">
+                            <label for="login-mobile">Mobile Number</label>
+                            <div class="mobile-input">
+                                <span class="mobile-prefix">+91</span>
+                                <input type="tel" id="login-mobile" class="form-control" maxlength="10" pattern="[0-9]{10}" placeholder="Enter 10-digit mobile number" autocomplete="tel" required>
+                            </div>
+                        </div>
+                        <p class="error-message" id="mobileError"></p>
+                        <button type="button" id="verify-mobile-btn" class="btn">Verify</button>
+                    </div>
+
+                    <!-- Verification Options -->
+                    <div id="verification-options" style="display: none;">
+                        <h3>Choose verification method:</h3>
+                        <div class="verification-buttons">
+                            <button type="button" id="verify-with-otp" class="btn btn-secondary">Verify with OTP</button>
+                            <button type="button" id="verify-with-password" class="btn btn-secondary" style="display: none;">Verify with Password</button>
+                        </div>
+                    </div>
+
+                    <!-- OTP Verification Form -->
+                    <div id="otp-verification-form" style="display: none;">
+                        <div class="form-group">
+                            <label for="login-otp">Enter OTP</label>
+                            <input type="text" id="login-otp" class="form-control" maxlength="6" placeholder="Enter 6-digit OTP" required>
+                        </div>
+                        <p class="error-message" id="otpError"></p>
+                        <div class="form-actions">
+                            <button type="button" id="verify-otp-btn" class="btn">Verify OTP</button>
+                            <button type="button" id="resend-otp-btn" class="btn btn-link" disabled>Resend OTP (60s)</button>
+                        </div>
+                        <button type="button" id="back-to-options" class="btn btn-link">Back to options</button>
+                    </div>
+
+                    <!-- Password Verification Form -->
+                    <div id="password-verification-form" style="display: none;">
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required>
+                        </div>
+                        <p class="error-message" id="passwordError"></p>
+                        <div class="form-actions">
+                            <button type="button" id="verify-password-btn" class="btn">Login</button>
+                        </div>
+                        <button type="button" id="back-to-options-password" class="btn btn-link">Back to options</button>
+                    </div>
+
+                    <p class="switch-auth">Don't have an account? <a href="#" id="switch-to-register">Sign up</a></p>
+                </div>
+
+                <!-- Registration Form -->
+                <div class="auth-container" id="register-container" style="display: none;">
+                    <h2 class="form-title">Create Account</h2>
+                    <div class="divider">Register with mobile number</div>
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="first-name">First Name</label>
+                            <input type="text" id="first-name" class="form-control" placeholder="Enter your first name"
+                                name="first_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="last-name">Last Name</label>
+                            <input type="text" id="last-name" class="form-control" placeholder="Enter your last name"
+                                name="last_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-email">Email Address (Optional)</label>
+                            <input type="email" id="register-email" class="form-control" placeholder="Enter your email (optional)"
+                                name="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="register-mobile">Mobile Number</label>
+                            <div class="mobile-input">
+                                <span class="mobile-prefix">+91</span>
+                                <input type="tel" id="register-mobile" class="form-control" maxlength="10" pattern="[0-9]{10}" placeholder="Enter 10-digit mobile number" name="mobile" autocomplete="tel" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">Password</label>
+                            <input type="password" id="register-password" class="form-control"
+                                placeholder="Create a password" name="password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-password">Confirm Password</label>
+                            <input type="password" id="confirm-password" class="form-control"
+                                placeholder="Confirm your password" required>
+                        </div>
+                        <p class="error-message" id="registerError"></p>
+                        <p class="success-message" id="registerSuccess"></p>
+                        <button type="submit" id="btn" class="btn">Create Account</button>
+                    </form>
+
+                    <p class="switch-auth">Already have an account? <a href="#" id="switch-to-login">Log in</a></p>
+                </div>
+
+                <!-- Account Dashboard (shown after login) -->
+                <div class="account-dashboard" id="account-dashboard" style="display: none;">
+                    <div class="account-sidebar">
+                        <div class="account-greeting">
+                            <h2>Hi, <span id="user-name">User</span></h2>
+                            <p>Welcome back to your account</p>
+                        </div>
+
+                        <ul class="account-menu">
+                            <li><a href="#" class="menu-item active" data-tab="dashboard">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                            <li><a href="#" class="menu-item" data-tab="orders">
+                                <i class="fas fa-shopping-bag"></i> Orders</a></li>
+
+                            <li><a href="#" class="menu-item" data-tab="addresses">
+                                <i class="fas fa-map-marker-alt"></i> Addresses</a></li>
+                            <li><a href="#" class="menu-item" data-tab="account-details">
+                                <i class="fas fa-user"></i> Account Details</a></li>
+
+                            <li><a href="#" class="menu-item" data-tab="security">
+                                <i class="fas fa-shield-alt"></i> Security</a></li>
+
+                            <li><a href="#" class="menu-item" data-tab="support">
+                                <i class="fas fa-headset"></i> Support</a></li>
+                            <li><a href="#" id="logout-btn">
+                                <i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="account-content">
+                        <!-- Dashboard Tab -->
+                        <div class="tab-content active" id="dashboard-tab">
+                            <div class="account-header">
+                                <h2>Dashboard Overview</h2>
+                            </div>
+                            <div class="dashboard-overview">
+                                <div class="overview-card">
+                                    <p class="overview-title">Total Orders</p>
+                                    <h3 class="overview-value" id="total-orders">0</h3>
+                                </div>
+                                <div class="overview-card">
+                                    <p class="overview-title">Pending Orders</p>
+                                    <h3 class="overview-value" id="pending-orders">0</h3>
+                                </div>
+                                <div class="overview-card">
+                                    <p class="overview-title">Wishlist Items</p>
+                                    <h3 class="overview-value" id="wishlist-count">0</h3>
+                                </div>
+                            </div>
+                            <div class="account-header">
+                                <h2>Recent Orders</h2>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="orders-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Order #</th>
+                                            <th>Date</th>
+                                            <th>Status</th>
+                                            <th>Total</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recent-orders-tbody">
+                                        <tr>
+                                            <td colspan="5" class="text-center">Loading orders...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Orders Tab -->
+                        <div class="tab-content" id="orders-tab">
+                            <div class="account-header">
+                                <h2>My Orders</h2>
+                                <div class="order-filters">
+                                    <select id="order-status-filter">
+                                        <option value="">All Orders</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="processing">Processing</option>
+                                        <option value="shipped">Shipped</option>
+                                        <option value="out-for-delivery">Out for Delivery</option>
+                                        <option value="delivered">Delivered</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="orders-container" id="all-orders-container">
+                                <!-- Sample Order Cards -->
+                                <div class="order-card-elongated">
+                                    <div class="order-card-header">
+                                        <div class="order-info">
+                                            <h3 class="order-number">#ORD-2024-001</h3>
+                                            <p class="order-date">Placed on March 15, 2024</p>
+                                        </div>
+                                        <div class="order-status-badge status-processing">Processing</div>
+                                    </div>
+                                    <div class="order-card-body">
+                                    </div>
+                                    <div class="order-card-footer">
+                                        <button class="btn-track">Track Order</button>
+                                        <button class="btn-details">View Details</button>
+                                        <button class="btn-reorder">Reorder</button>
+                                    </div>
+                                </div>
+
+                                <div class="order-card-elongated">
+                                    <div class="order-card-header">
+                                        <div class="order-info">
+                                            <h3 class="order-number">#ORD-2024-002</h3>
+                                            <p class="order-date">Placed on March 10, 2024</p>
+                                        </div>
+                                        <div class="order-status-badge status-delivered">Delivered</div>
+                                    </div>
+                                    <div class="order-card-body">
+                                        <div class="order-items">
+                                            <div class="order-item">
+                                                <img src="https://via.placeholder.com/60x60" alt="Product" class="item-image">
+                                                <div class="item-details">
+                                                    <h4>Premium BBQ Sauce Set</h4>
+                                                    <p>Quantity: 3</p>
+                                                </div>
+                                                <div class="item-price">₹899</div>
+                                            </div>
+                                        </div>
+                                        <div class="order-summary">
+                                            <div class="summary-row total">
+                                                <span>Total:</span>
+                                                <span>₹899</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="order-card-footer">
+                                        <button class="btn-review">Write Review</button>
+                                        <button class="btn-details">View Details</button>
+                                        <button class="btn-reorder">Reorder</button>
+                                    </div>
+                                </div>
+
+                                <div class="order-card-elongated">
+                                    <div class="order-card-header">
+                                        <div class="order-info">
+                                            <h3 class="order-number">#ORD-2024-003</h3>
+                                            <p class="order-date">Placed on March 5, 2024</p>
+                                        </div>
+                                        <div class="order-status-badge status-shipped">Shipped</div>
+                                    </div>
+                                    <div class="order-card-body">
+                                        <div class="order-items">
+                                            <div class="order-item">
+                                                <img src="https://via.placeholder.com/60x60" alt="Product" class="item-image">
+                                                <div class="item-details">
+                                                    <h4>BBQ Accessories Kit</h4>
+                                                    <p>Quantity: 1</p>
+                                                </div>
+                                                <div class="item-price">₹1,599</div>
+                                            </div>
+                                        </div>
+                                        <div class="order-summary">
+                                            <div class="summary-row total">
+                                                <span>Total:</span>
+                                                <span>₹1,599</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="order-card-footer">
+                                        <button class="btn-track">Track Order</button>
+                                        <button class="btn-details">View Details</button>
+                                        <button class="btn-cancel">Cancel Order</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Wishlist Tab -->
+                        <div class="tab-content" id="wishlist-tab">
+                            <div class="account-header">
+                                <h2>My Wishlist</h2>
+                                <button id="clear-all-wishlist" class="btn-secondary">
+                                    <i class="fas fa-trash"></i> Clear All
+                                </button>
+                            </div>
+                            <div class="wishlist-container" id="wishlist-items-container">
+                                <p class="text-center">Loading wishlist...</p>
+                            </div>
+                        </div>
+
+                        <!-- Addresses Tab -->
+                        <div class="tab-content" id="addresses-tab">
+                            <div class="account-header">
+                                <h2>My Addresses</h2>
+                                <button id="add-address-btn" class="btn-primary">
+                                    <i class="fas fa-plus"></i> Add New Address
+                                </button>
+                            </div>
+                            <div class="addresses-container" id="addresses-container">
+                                <p class="text-center">Loading addresses...</p>
+                            </div>
+                        </div>
+
+                        <!-- Account Details Tab -->
+                        <div class="tab-content" id="account-details-tab">
+                            <div class="account-header">
+                                <h2>Account Details</h2>
+                            </div>
+                            <form id="account-details-form" class="account-form">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="account-first-name">First Name</label>
+                                        <input type="text" id="account-first-name" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="account-last-name">Last Name</label>
+                                        <input type="text" id="account-last-name" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="account-email">Email Address (Optional)</label>
+                                    <input type="email" id="account-email" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="account-mobile">Mobile Number</label>
+                                    <input type="tel" id="account-mobile" class="form-control" maxlength="10" pattern="[0-9]{10}" autocomplete="tel" required>
+                                </div>
+                                <button type="submit" class="btn-primary">Update Details</button>
+                            </form>
+                        </div>
+                        <!-- Security Tab -->
+                        <div class="tab-content" id="security-tab">
+                            <div class="account-header">
+                                <h2>Security Settings</h2>
+                            </div>
+                            <div class="security-section">
+                                <h3>Change Password</h3>
+                                <form id="change-password-form" class="account-form">
+                                    <div class="form-group">
+                                        <label for="current-password">Current Password</label>
+                                        <input type="password" id="current-password" class="form-control">
+                                        <small class="text-gray-500">Leave empty if you don't have a password set</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="new-password">New Password</label>
+                                        <input type="password" id="new-password" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="confirm-new-password">Confirm New Password</label>
+                                        <input type="password" id="confirm-new-password" class="form-control" required>
+                                    </div>
+                                    <button type="submit" class="btn-primary">Change Password</button>
+                                </form>
+                            </div>
+                        </div>
+
+
+
+                        <!-- Support Tab -->
+                        <div class="tab-content" id="support-tab">
+                            <div class="account-header">
+                                <h2>Customer Support</h2>
+                            </div>
+                            <div class="support-options">
+                                <div class="support-card">
+                                    <i class="fas fa-phone"></i>
+                                    <h3>Call Us</h3>
+                                    <p><a href="tel:+918901551059">+91 8901551059</a></p>
+                                    <p>Mon-Sat: 10AM-7PM</p>
+                                </div>
+                                <div class="support-card">
+                                    <i class="fas fa-envelope"></i>
+                                    <h3>Email Support</h3>
+                                    <p><a href="mailto:support@bbqstyle.in">support@bbqstyle.in</a></p>
+                                    <p>24/7 Support</p>
+                                </div>
+                                <div class="support-card">
+                                    <i class="fab fa-whatsapp"></i>
+                                    <h3>Chat on WhatsApp</h3>
+                                    <p>+91 8901551059</p>
+                                    <button class="btn-primary" onclick="window.open('https://wa.me/918901551059', '_blank')">Start Chat</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer id="footer" class="bg-gray-800 text-white pt-12 pb-6">
+    </footer>
+</body>
+
+</html>

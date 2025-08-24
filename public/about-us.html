@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us</title>
+    <link rel="icon" type="image/x-icon" href="src/favicon.ico">
+    <link rel="stylesheet" href="css/about-us.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">    <script src="js/baseurl.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>    <script src="js/baseurl.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>    <script src="js/baseurl.js"></script>
+    <script src="js/config.js"></script>    <script src="js/baseurl.js"></script>
+    <script defer src="js/about-us.js"></script>    <script src="js/baseurl.js"></script>
+    <script src="js/headerall.js"></script>    <script src="js/baseurl.js"></script>
+    <script src="js/footer.js"></script>
+    <link rel="stylesheet" href="css/headerall.css">    <script src="js/baseurl.js"></script>
+    <script src="js/auth-helper.js"></script>
+</head>
+
+<body>
+    <!-- Header/Navigation -->
+    <header class="header" id="header">
+        
+    </header>
+
+
+    <!-- Main Content -->
+    <main id="container" class="container">
+        <!-- Our Story -->
+        <section class="mb-20">
+            <div class="flex flex-col md:flex-row items-center gap-12">
+                <div id="img" class="md:w-1/2">
+                    <img src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80"
+                        alt="Premium fabric textures representing BBQSTYLE's quality curation" class="rounded-lg shadow-lg">
+                </div>
+                <div class="md:w-1/2">
+                    <h5 class="h5 font-bold mb-6">Our Heritage</h5>
+                    <p class="mb-4">BBQSTYLE was founded with a passion for connecting fashion enthusiasts with the finest products from trusted brands and designers. We carefully curate collections from established manufacturers and emerging designers to bring you the best in contemporary fashion.</p>
+                    <p>As your trusted fashion destination, we focus on sourcing and presenting premium women's, men's, and home decor items that reflect the latest trends while maintaining exceptional quality standards. Our mission is to make stylish, high-quality products accessible to everyone.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Our Collection -->
+        <section class="mb-20">
+            <h5 class="h5 font-bold mb-12 text-center">Our Collection</h5>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 justify-center">
+                <!-- Dynamic collection cards will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Our Commitment -->
+        <section class="bg-indigo-50 p-12 rounded-lg mb-20">
+            <h5 class="h6 font-bold mb-8 text-center">Our Commitment</h5>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="text-center">
+                    <div
+                        class="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-600" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                    </div>
+                    <h6 class="text-xl font-bold mb-2">Curated Selection</h6>
+                    <p>We carefully select products from trusted brands and designers to ensure quality and style in every piece.</p>
+                </div>
+                <div class="text-center">
+                    <div
+                        class="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-600" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </div>
+                    <h6 class="text-xl font-bold mb-2">Customer Service</h6>
+                    <p>We provide exceptional shopping experience with fast delivery, easy returns, and dedicated customer support.</p>
+                </div>
+                <div class="text-center">
+                    <div
+                        class="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-600" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <h6 class="text-xl font-bold mb-2">Trusted Platform</h6>
+                    <p>We maintain secure payment processing and authentic product guarantee for a safe and reliable shopping experience.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Join Us -->
+        <section class="text-center mb-20">
+            <h5 class="h5 font-bold mb-6">Join the BBQSTYLE Family</h5>
+            <p class="max-w-2xl mx-auto mb-8">Discover the perfect materials to create your next stunning outfit.
+                Whether you're dressing up for a special occasion or looking for everyday elegance, BBQSTYLE has the
+                perfect pieces for you.</p>
+            <div class="flex justify-center space-x-4">
+                <a href="collections.html"
+                    class="sn bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-all">Shop
+                    Now</a>
+                <a href="contact-us.html"
+                    class="border border-indigo-600 text-indigo-600 px-6 py-3 rounded-lg hover:bg-indigo-50 transition-all">Contact
+                    Us</a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer id="footer" class="bg-gray-800 text-white pt-12 pb-6">
+    </footer>
+
+</body>
+
+</html>

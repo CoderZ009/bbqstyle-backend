@@ -13,6 +13,41 @@ function clientAuthFetch(url, options = {}) {
         headers
     });
 }
+
+// Loading state utility functions
+function setButtonLoading(button, loading = true) {
+    if (loading) {
+        button.dataset.originalText = button.textContent;
+        button.innerHTML = '<div class="loading-spinner"></div>' + button.textContent;
+        button.disabled = true;
+    } else {
+        button.innerHTML = button.dataset.originalText || button.textContent.replace(/^.*?([A-Z])/, '$1');
+        button.disabled = false;
+    }
+}
+
+// Add CSS for loading spinner
+if (!document.getElementById('loading-styles')) {
+    const style = document.createElement('style');
+    style.id = 'loading-styles';
+    style.textContent = `
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+}
 class CheckoutManager {
     constructor() {
         this.currentStep = 1;
@@ -179,17 +214,23 @@ class CheckoutManager {
         // Navigation buttons
         document.getElementById('nextToPayment').addEventListener('click', async () => {
             const addressSelect = document.getElementById('addressSelect');
-            // If add-new is selected, save address first
-            if (addressSelect.value === 'add-new') {
-                await this.saveNewAddress();
-                if (!this.selectedAddress) {
-                    return; // Don't proceed if address save failed
+            const nextBtn = document.getElementById('nextToPayment');
+            setButtonLoading(nextBtn, true);
+            try {
+                // If add-new is selected, save address first
+                if (addressSelect.value === 'add-new') {
+                    await this.saveNewAddress();
+                    if (!this.selectedAddress) {
+                        return; // Don't proceed if address save failed
+                    }
                 }
-            }
-            if (!this.userId) {
-                await this.verifyGuestUser();
-            } else {
-                this.goToStep(2);
+                if (!this.userId) {
+                    await this.verifyGuestUser();
+                } else {
+                    this.goToStep(2);
+                }
+            } finally {
+                setButtonLoading(nextBtn, false);
             }
         });
         document.getElementById('backToAddress').addEventListener('click', () => {
@@ -256,6 +297,8 @@ class CheckoutManager {
             isDefault: formData.get('isDefault') === 'on',
             isGuest: !this.userId
         };
+        const saveBtn = document.querySelector('#newAddressForm button[type="submit"]');
+        if (saveBtn) setButtonLoading(saveBtn, true);
         try {
             if (this.isLoggedIn && this.userId) {
                 // Save to database for logged-in users
@@ -291,6 +334,8 @@ class CheckoutManager {
         } catch (error) {
             console.error('Failed to save address:', error);
             alert('Failed to save address');
+        } finally {
+            if (saveBtn) setButtonLoading(saveBtn, false);
         }
     }
     goToStep(step) {
@@ -415,14 +460,19 @@ class CheckoutManager {
                     this.showOtpError(errorDiv, 'Please enter OTP');
                     return;
                 }
-                const verified = await this.verifyOTP(mobile, otp, errorDiv);
-                if (verified) {
-                    // If user doesn't exist, create account
-                    if (!this.isLoggedIn) {
-                        await this.createGuestAccount(mobile);
+                setButtonLoading(verifyBtn, true);
+                try {
+                    const verified = await this.verifyOTP(mobile, otp, errorDiv);
+                    if (verified) {
+                        // If user doesn't exist, create account
+                        if (!this.isLoggedIn) {
+                            await this.createGuestAccount(mobile);
+                        }
+                        document.body.removeChild(otpModal);
+                        resolve(true);
                     }
-                    document.body.removeChild(otpModal);
-                    resolve(true);
+                } finally {
+                    setButtonLoading(verifyBtn, false);
                 }
             });
             cancelBtn.addEventListener('click', () => {
@@ -625,6 +675,8 @@ class CheckoutManager {
         if (!promoCode) {
             return;
         }
+        const applyBtn = document.getElementById('applyPromoBtn');
+        setButtonLoading(applyBtn, true);
         try {
             const response = await fetch(`${API_BASE_URL}/api/apply-promo`, {
                 method: 'POST',
@@ -653,6 +705,8 @@ class CheckoutManager {
             promoMessage.textContent = 'Failed to apply promo code';
             promoMessage.className = 'mt-2 text-sm text-red-600';
             promoMessage.classList.remove('hidden');
+        } finally {
+            setButtonLoading(applyBtn, false);
         }
     }
     async placeOrder() {

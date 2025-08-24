@@ -13,6 +13,41 @@ function showToast(message, link = null) {
         toast.classList.remove('show');
     }, 3000);
 }
+
+// Loading state utility functions
+function setButtonLoading(button, loading = true) {
+    if (loading) {
+        button.dataset.originalText = button.textContent;
+        button.innerHTML = '<div class="loading-spinner"></div>' + button.textContent;
+        button.disabled = true;
+    } else {
+        button.innerHTML = button.dataset.originalText || button.textContent.replace(/^.*?([A-Z])/, '$1');
+        button.disabled = false;
+    }
+}
+
+// Add CSS for loading spinner
+if (!document.getElementById('loading-styles')) {
+    const style = document.createElement('style');
+    style.id = 'loading-styles';
+    style.textContent = `
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+}
 document.addEventListener('DOMContentLoaded', function () {
     // Set axios to send cookies with requests
     axios.defaults.withCredentials = true;
@@ -134,6 +169,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             mobileError.textContent = '';
             currentMobile = mobile;
+            setButtonLoading(this, true);
             // Check if user exists with this mobile number
             fetch(`${API_BASE_URL}/api/mobile-login-check`, {
                 method: 'POST',
@@ -179,6 +215,9 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => {
                 console.error('Error checking mobile:', error);
                 mobileError.textContent = 'An error occurred. Please try again.';
+            })
+            .finally(() => {
+                setButtonLoading(this, false);
             });
         });
     }
@@ -215,6 +254,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             otpError.textContent = '';
+            setButtonLoading(this, true);
             fetch(`${API_BASE_URL}/api/mobile-login-otp`, {
                 method: 'POST',
                 headers: {
@@ -234,6 +274,9 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => {
                 console.error('Error verifying OTP:', error);
                 otpError.textContent = 'An error occurred. Please try again.';
+            })
+            .finally(() => {
+                setButtonLoading(this, false);
             });
         });
     }
@@ -248,6 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             passwordError.textContent = '';
+            setButtonLoading(this, true);
             fetch(`${API_BASE_URL}/api/mobile-login-password`, {
                 method: 'POST',
                 headers: {
@@ -267,6 +311,9 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => {
                 console.error('Error verifying password:', error);
                 passwordError.textContent = 'An error occurred. Please try again.';
+            })
+            .finally(() => {
+                setButtonLoading(this, false);
             });
         });
     }
@@ -379,6 +426,8 @@ document.addEventListener('DOMContentLoaded', function () {
             };
             // Add optional fields if provided
             if (email) requestData.email = email;
+            const submitBtn = this.querySelector('button[type="submit"]');
+            setButtonLoading(submitBtn, true);
             fetch(`${API_BASE_URL}/api/register`, {
                 method: 'POST',
                 headers: {
@@ -400,6 +449,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 .catch(error => {
                     console.error('Error during registration:', error);
                     registerError.textContent = 'An error occurred during registration.';
+                })
+                .finally(() => {
+                    setButtonLoading(submitBtn, false);
                 });
         });
     }
@@ -786,6 +838,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 email: document.getElementById('account-email').value,
                 mobile: document.getElementById('account-mobile').value
             };
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            setButtonLoading(submitBtn, true);
             clientAuthFetch(`${API_BASE_URL}/api/update-profile`, {
                 method: 'PUT',
                 headers: {
@@ -806,6 +860,9 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => {
                 console.error('Error updating account details:', error);
                 showToast('Error updating account details');
+            })
+            .finally(() => {
+                setButtonLoading(submitBtn, false);
             });
         }
         // Change Password Form
@@ -822,6 +879,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 showToast('New password and confirm password do not match');
                 return;
             }
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            setButtonLoading(submitBtn, true);
             clientAuthFetch(`${API_BASE_URL}/api/change-password`, {
                 method: 'PUT',
                 headers: {
@@ -845,6 +904,9 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => {
                 console.error('Error changing password:', error);
                 showToast('Error changing password');
+            })
+            .finally(() => {
+                setButtonLoading(submitBtn, false);
             });
         }
     });
@@ -983,6 +1045,8 @@ document.addEventListener('DOMContentLoaded', function () {
                             pincode: document.getElementById('edit-pincode').value,
                             isDefault: document.getElementById('edit-is-default').checked
                         };
+                        const submitBtn = this.querySelector('button[type="submit"]');
+                        setButtonLoading(submitBtn, true);
                         clientAuthFetch(`${API_BASE_URL}/api/addresses/${addressId}`, { method: 'PUT', headers: {
                                 'Content-Type': 'application/json'
                             }, body: JSON.stringify(formData) })
@@ -999,6 +1063,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         .catch(error => {
                             console.error('Error updating address:', error);
                             showToast('Error updating address');
+                        })
+                        .finally(() => {
+                            setButtonLoading(submitBtn, false);
                         });
                     });
                 }
@@ -1007,7 +1074,8 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(error => console.error('Error fetching address:', error));
     }
     // Cancel Order Function
-    async function cancelOrder(orderId, cancellationData = {}) {
+    async function cancelOrder(orderId, cancellationData = {}, cancelBtn = null) {
+        if (cancelBtn) setButtonLoading(cancelBtn, true);
         try {
             const response = await clientAuthFetch(`${API_BASE_URL}/api/orders/${orderId}/cancel`, { method: 'POST', headers: {
                     'Content-Type': 'application/json'
@@ -1022,6 +1090,8 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) {
             console.error('Error cancelling order:', error);
             showToast('Error cancelling order');
+        } finally {
+            if (cancelBtn) setButtonLoading(cancelBtn, false);
         }
     }
     // Show Review Modal
@@ -1189,7 +1259,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
     // Reorder Items Function
-    async function reorderItems(orderId) {
+    async function reorderItems(orderId, reorderBtn = null) {
+        if (reorderBtn) setButtonLoading(reorderBtn, true);
         try {
             // Get order items
             const response = await clientAuthFetch(`${API_BASE_URL}/api/admin/orders/${orderId}/items`);
@@ -1220,6 +1291,8 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) {
             console.error('Error reordering items:', error);
             showToast('Error reordering items');
+        } finally {
+            if (reorderBtn) setButtonLoading(reorderBtn, false);
         }
     }
     // Show Cancel Order Modal
@@ -1307,8 +1380,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 reason: reason === 'other' ? otherReason : reason,
                 additionalComments: additionalComments
             };
+            const submitBtn = this.querySelector('button[type="submit"]');
             modal.remove();
-            cancelOrder(orderId, cancellationData);
+            cancelOrder(orderId, cancellationData, submitBtn);
         });
     }
     // Show Return Modal
@@ -1434,6 +1508,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 pincode: document.getElementById('add-pincode').value,
                 isDefault: document.getElementById('add-is-default').checked
             };
+            const submitBtn = this.querySelector('button[type="submit"]');
+            setButtonLoading(submitBtn, true);
             clientAuthFetch(`${API_BASE_URL}/api/addresses`, {
                 method: 'POST',
                 headers: {
@@ -1454,6 +1530,9 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(error => {
                 console.error('Error adding address:', error);
                 showToast('Error adding address');
+            })
+            .finally(() => {
+                setButtonLoading(submitBtn, false);
             });
         });
     }

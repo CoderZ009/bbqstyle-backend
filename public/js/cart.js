@@ -13,6 +13,41 @@ function showToast(message, link = null) {
         toast.classList.remove('show');
     }, 4000);
 }
+
+// Loading state utility functions
+function setButtonLoading(button, loading = true) {
+    if (loading) {
+        button.dataset.originalText = button.textContent;
+        button.innerHTML = '<div class="loading-spinner"></div>' + button.textContent;
+        button.disabled = true;
+    } else {
+        button.innerHTML = button.dataset.originalText || button.textContent.replace(/^.*?([A-Z])/, '$1');
+        button.disabled = false;
+    }
+}
+
+// Add CSS for loading spinner
+if (!document.getElementById('loading-styles')) {
+    const style = document.createElement('style');
+    style.id = 'loading-styles';
+    style.textContent = `
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+}
 let cartData = {
     items: [],
     totalItems: 0,
@@ -227,8 +262,12 @@ function handleCheckout() {
         showToast('Your cart is empty');
         return;
     }
-    // Redirect to checkout page
-    window.location.href = '/checkout.html';
+    const checkoutBtn = document.querySelector('.cart-total button');
+    setButtonLoading(checkoutBtn, true);
+    // Small delay to show loading state
+    setTimeout(() => {
+        window.location.href = '/checkout.html';
+    }, 500);
 }
 // Change variant for cart item
 function changeVariant(item, newVariant, currentVariant) {

@@ -34,6 +34,19 @@ app.get('/health', (req, res) => {
         environment: process.env.NODE_ENV || 'development'
     });
 });
+
+// Keep server awake by sending request every 12 minutes
+setInterval(() => {
+    const https = require('https');
+    const url = process.env.BASE_URL || 'https://bbqstyle-backend.onrender.com';
+    
+    https.get(`${url}/health`, (res) => {
+        console.log(`Keep-alive ping: ${res.statusCode}`);
+    }).on('error', (err) => {
+        console.log('Keep-alive ping failed:', err.message);
+    });
+}, 12 * 60 * 1000); // 12 minutes
+
 const port = process.env.PORT || 3000;
 
 // MySQL Connection Pool

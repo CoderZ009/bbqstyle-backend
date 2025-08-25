@@ -828,8 +828,8 @@ app.get('/api/orders/:orderId/invoice', (req, res) => {
         SELECT o.*, a.full_name, a.mobile_no, a.address_line1, a.address_line2, 
                a.city, a.state, a.pincode, u.email
         FROM orders o
-        JOIN addresses a ON o.address_id = a.address_id
-        JOIN users u ON o.user_id = u.user_id
+        LEFT JOIN addresses a ON o.address_id = a.address_id
+        LEFT JOIN users u ON o.user_id = u.user_id
         WHERE o.order_id = ?
     `;
 
@@ -848,7 +848,7 @@ app.get('/api/orders/:orderId/invoice', (req, res) => {
         const itemsQuery = `
             SELECT oi.*, p.title, p.hsn
             FROM order_items oi
-            JOIN products p ON oi.product_id = p.product_id
+            LEFT JOIN products p ON oi.product_id = p.product_id
             WHERE oi.order_id = ?
         `;
 
@@ -869,26 +869,26 @@ app.get('/api/orders/:orderId/invoice', (req, res) => {
                 order: {
                     order_id: order.order_id,
                     order_date: order.order_date,
-                    payment_mode: order.payment_mode,
-                    subtotal: order.subtotal,
+                    payment_mode: order.payment_mode || 'COD',
+                    subtotal: order.subtotal || order.total_amount,
                     discount: order.discount || 0,
                     total_amount: order.total_amount
                 },
                 customer: {
-                    name: order.full_name,
-                    mobile: order.mobile_no,
-                    email: order.email,
+                    name: order.full_name || 'Customer',
+                    mobile: order.mobile_no || 'N/A',
+                    email: order.email || 'N/A',
                     address: {
-                        line1: order.address_line1,
-                        line2: order.address_line2,
-                        city: order.city,
-                        state: order.state,
-                        pincode: order.pincode
+                        line1: order.address_line1 || 'N/A',
+                        line2: order.address_line2 || '',
+                        city: order.city || 'N/A',
+                        state: order.state || 'N/A',
+                        pincode: order.pincode || 'N/A'
                     }
                 },
                 items: itemsResults.map(item => ({
-                    title: item.title,
-                    variant_detail: item.variant_detail,
+                    title: item.title || 'Product',
+                    variant_detail: item.variant_detail || '',
                     hsn: item.hsn || '61091000',
                     quantity: item.quantity,
                     price: item.price,

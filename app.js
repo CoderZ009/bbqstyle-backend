@@ -24,7 +24,7 @@ const nodemailer = require('nodemailer');
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // Bluehost SMTP Configuration
-const smtpTransporter = nodemailer.createTransporter({
+const smtpTransporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'mail.bbqstyle.in',
     port: process.env.SMTP_PORT || 587,
     secure: false, // true for 465, false for other ports

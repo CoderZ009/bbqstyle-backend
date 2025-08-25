@@ -350,25 +350,19 @@ const productUpload = multer({ storage: storage }).any();
 
 // Authentication middleware (for admin users only)
 function isAuthenticated(req, res, next) {
-    console.log('Admin auth check - Headers:', req.headers.authorization);
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
-        console.log('Admin auth failed - No token provided');
-        return res.status(401).json({ error: 'Unauthorized - No token provided' });
+        return res.status(401).json({ error: 'Unauthorized' });
     }
     
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        console.log('Admin auth - Decoded token:', decoded);
         if (decoded.email === 'admin@bbqstyle.in' && decoded.isAdmin) {
-            console.log('Admin auth successful');
             return next();
         } else {
-            console.log('Admin auth failed - Invalid admin credentials');
-            res.status(403).json({ error: 'Forbidden - Admin access required' });
+            res.status(403).json({ error: 'Forbidden' });
         }
     } catch (error) {
-        console.log('Admin auth failed - Token verification error:', error.message);
         res.status(401).json({ error: 'Invalid token' });
     }
 }
@@ -1534,14 +1528,11 @@ app.put('/api/addresses/:id', authenticateToken, (req, res) => {
 
 // Admin Login Route (retained for admin specific login)
 app.post('/admin/login', (req, res) => {
-    console.log('Admin login attempt:', req.body);
     const { email, password } = req.body;
     if (email === 'admin@bbqstyle.in' && password === 'adminhere') {
         const token = jwt.sign({ email, isAdmin: true }, JWT_SECRET, { expiresIn: '12h' });
-        console.log('Admin login successful, token generated');
         res.json({ message: 'Admin login successful', token });
     } else {
-        console.log('Admin login failed - Invalid credentials');
         res.status(401).json({ error: 'Invalid admin credentials' });
     }
 });
@@ -1554,32 +1545,21 @@ app.post('/admin/logout', (req, res) => {
 
 // Admin Session Status Route (retained for admin specific session check)
 app.get('/api/session', (req, res) => {
-    console.log('Session check - Headers:', req.headers.authorization);
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
-        console.log('Session check failed - No token');
         return res.status(401).json({ error: 'Unauthorized' });
     }
     
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        console.log('Session check - Decoded:', decoded);
         if (decoded.email === 'admin@bbqstyle.in' && decoded.isAdmin) {
-            console.log('Session check successful');
             res.json({ email: decoded.email });
         } else {
-            console.log('Session check failed - Invalid admin');
             res.status(401).json({ error: 'Unauthorized' });
         }
     } catch (error) {
-        console.log('Session check failed - Token error:', error.message);
         res.status(401).json({ error: 'Invalid token' });
     }
-});
-
-// Test endpoint for admin authentication
-app.get('/api/admin/test', isAuthenticated, (req, res) => {
-    res.json({ message: 'Admin authentication working', timestamp: new Date().toISOString() });
 });
 
 

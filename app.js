@@ -2941,6 +2941,26 @@ app.get('/api/public/reviews', (req, res) => {
     });
 });
 
+// Account page API endpoint for all reviews (published and unpublished)
+app.get('/api/account/reviews', authenticateToken, (req, res) => {
+    const productId = req.query.product_id;
+    const userId = req.userId;
+    let query = 'SELECT r.*, u.first_name FROM reviews r LEFT JOIN users u ON r.user_id = u.user_id WHERE r.user_id = ?';
+    const params = [userId];
+
+    if (productId) {
+        query += ' AND r.product_id = ?';
+        params.push(productId);
+    }
+
+    query += ' ORDER BY r.review_id DESC';
+
+    db.query(query, params, (err, results) => {
+        if (err) return res.status(500).json({ error: 'Database error' });
+        res.json(results);
+    });
+});
+
 // Public API endpoint for getting a single product by ID
 app.get('/api/public/products/:id', (req, res) => {
     const productId = req.params.id;

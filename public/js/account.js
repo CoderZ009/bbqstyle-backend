@@ -1244,7 +1244,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const commentTextarea = modal.querySelector('#review-comment');
                     
                     try {
-                        const reviewResponse = await fetch(`${API_BASE_URL}/api/public/reviews?product_id=${item.product_id}`);
+                        const reviewResponse = await clientAuthFetch(`${API_BASE_URL}/api/account/reviews?product_id=${item.product_id}`);
                         if (reviewResponse.ok) {
                             const reviews = await reviewResponse.json();
                             const existingReview = reviews.find(r => r.order_item_id == item.order_item_id);
@@ -1299,7 +1299,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Check for existing review to determine if update or create
                     let reviewData = { exists: false, review: null };
                     try {
-                        const reviewResponse = await fetch(`${API_BASE_URL}/api/public/reviews?product_id=${selectedProductId}`);
+                        const reviewResponse = await clientAuthFetch(`${API_BASE_URL}/api/account/reviews?product_id=${selectedProductId}`);
                         if (reviewResponse.ok) {
                             const reviews = await reviewResponse.json();
                             const existingReview = reviews.find(r => r.order_item_id == productSelect.options[productSelect.selectedIndex].dataset.orderItemId);

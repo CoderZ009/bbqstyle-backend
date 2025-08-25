@@ -819,6 +819,89 @@ app.get('/api/user-profile', authenticateToken, (req, res) => {
     });
 });
 
+// Get invoice data for order
+app.get('/api/orders/:orderId/invoice', authenticateToken, (req, res) => {
+    const orderId = req.params.orderId;
+    const userId = req.userId;
+
+    // Get order details with customer info
+    const orderQuery = `
+        SELECT o.*, a.full_name, a.mobile_no, a.address_line1, a.address_line2, 
+               a.city, a.state, a.pincode, u.email
+        FROM orders o
+        JOIN addresses a ON o.address_id = a.address_id
+        JOIN users u ON o.user_id = u.user_id
+        WHERE o.order_id = ? AND o.user_id = ?
+    `;
+
+    db.query(orderQuery, [orderId, userId], (err, orderResults) => {
+        if (err) {
+            console.error('Database error fetching order:', err);
+            return res.status(500).json({ success: false, message: 'Database error' });
+        }
+        if (orderResults.length === 0) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+
+        const order = orderResults[0];
+
+        // Get order items
+        const itemsQuery = `
+            SELECT oi.*, p.title, p.hsn
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.product_id
+            WHERE oi.order_id = ?
+        `;
+
+        db.query(itemsQuery, [orderId], (itemsErr, itemsResults) => {
+            if (itemsErr) {
+                console.error('Database error fetching order items:', itemsErr);
+                return res.status(500).json({ success: false, message: 'Database error' });
+            }
+
+            const invoice = {
+                company: {
+                    name: 'BBQ Style',
+                    address: 'Kolkata, West Bengal, India',
+                    gstin: '19AABCU9603R1ZM',
+                    email: 'support@bbqstyle.in',
+                    phone: '+91 8901551059'
+                },
+                order: {
+                    order_id: order.order_id,
+                    order_date: order.order_date,
+                    payment_mode: order.payment_mode,
+                    subtotal: order.subtotal,
+                    discount: order.discount || 0,
+                    total_amount: order.total_amount
+                },
+                customer: {
+                    name: order.full_name,
+                    mobile: order.mobile_no,
+                    email: order.email,
+                    address: {
+                        line1: order.address_line1,
+                        line2: order.address_line2,
+                        city: order.city,
+                        state: order.state,
+                        pincode: order.pincode
+                    }
+                },
+                items: itemsResults.map(item => ({
+                    title: item.title,
+                    variant_detail: item.variant_detail,
+                    hsn: item.hsn || '61091000',
+                    quantity: item.quantity,
+                    price: item.price,
+                    total: item.price * item.quantity
+                }))
+            };
+
+            res.json({ success: true, invoice });
+        });
+    });
+});
+
 // Change password endpoint
 app.put('/api/change-password', authenticateToken, (req, res) => {
     const userId = req.userId;
@@ -2684,6 +2767,41 @@ app.get('/api/orders', authenticateToken, (req, res) => {
             return res.status(500).json({ error: 'Database error', success: false });
         }
         res.json({ success: true, orders: results || [] });
+    });
+});
+
+// Get order items for admin
+app.get('/api/admin/orders/:orderId/items', isAuthenticated, (req, res) => {
+    const orderId = req.params.orderId;
+
+    const query = `
+        SELECT oi.*, p.title, pi.image_path
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.product_id
+        LEFT JOIN product_images pi ON p.product_id = pi.product_id
+        WHERE oi.order_id = ?
+        GROUP BY oi.order_item_id
+    `;
+
+    db.query(query, [orderId], (err, results) => {
+        if (err) {
+            console.error('Database error fetching order items:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json(results);
+    });
+});
+
+// Get addresses for user
+app.get('/api/addresses', authenticateToken, (req, res) => {
+    const userId = req.userId;
+
+    db.query('SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC, address_id DESC', [userId], (err, results) => {
+        if (err) {
+            console.error('Database error fetching addresses:', err);
+            return res.status(500).json({ success: false, message: 'Database error' });
+        }
+        res.json({ success: true, addresses: results });
     });
 });
 

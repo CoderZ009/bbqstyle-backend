@@ -2858,7 +2858,7 @@ app.post('/api/public/reviews', authenticateToken, (req, res) => {
 // Edit a review
 app.put('/api/reviews/:id', authenticateToken, (req, res) => {
     const reviewId = req.params.id;
-    const { product_id, review_text, star_rating, publish_status, order_item_id } = req.body;
+    const { product_id, review_text, star_rating, publish_status } = req.body;
     const userId = req.userId;
 
     if (!product_id || !review_text || !star_rating) {
@@ -2869,8 +2869,8 @@ app.put('/api/reviews/:id', authenticateToken, (req, res) => {
     }
     const publish = publish_status ? 1 : 0;
     db.query(
-        'UPDATE reviews SET product_id = ?, review_text = ?, star_rating = ?, publish_status = ?, order_item_id = ? WHERE review_id = ?',
-        [product_id, review_text, star_rating, publish, order_item_id || null, reviewId],
+        'UPDATE reviews SET product_id = ?, review_text = ?, star_rating = ?, publish_status = ? WHERE review_id = ?',
+        [product_id, review_text, star_rating, publish, reviewId],
         (err, result) => {
             if (err) {
                 console.error('Database update error:', err);

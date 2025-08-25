@@ -2219,23 +2219,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Cancellation Details - Order #${orderId}</h2>
-                    <span class="close-modal">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div id="reason-loading" class="text-center py-4"><div class="loading-spinner"></div>Loading...</div>
-                    <div id="reason-content" style="display: none;">
-                        <div class="form-group">
-                            <label>Cancellation Reason:</label>
-                            <div id="cancel-reason" class="form-control" style="background: #f5f5f5; padding: 1rem; border-radius: 8px;"></div>
+            <div id="view-reason-form-container" class="modal-content">
+                <div class="modalbody">
+                    <form id="view-reason-form">
+                        <h2>Cancellation Details - Order #${orderId}<span class="close-modal">&times;</span></h2>
+                        
+                        <div id="reason-loading" class="text-center py-4"><div class="loading-spinner"></div>Loading...</div>
+                        <div id="reason-content" style="display: none;">
+                            <div class="form-group">
+                                <label>Cancellation Reason:</label>
+                                <input type="text" id="cancel-reason" readonly style="background-color: #f5f5f5;">
+                            </div>
+                            <div class="form-group">
+                                <label>Additional Comments:</label>
+                                <textarea id="cancel-comments" readonly rows="3" style="background-color: #f5f5f5; resize: vertical;"></textarea>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Additional Comments:</label>
-                            <div id="cancel-comments" class="form-control" style="background: #f5f5f5; padding: 1rem; border-radius: 8px; min-height: 80px;"></div>
-                        </div>
-                    </div>
+                    </form>
                 </div>
             </div>
         `;
@@ -2249,8 +2249,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             document.getElementById('reason-loading').style.display = 'none';
             document.getElementById('reason-content').style.display = 'block';
-            document.getElementById('cancel-reason').textContent = data.reason || 'N/A';
-            document.getElementById('cancel-comments').textContent = data.comments || 'N/A';
+            document.getElementById('cancel-reason').value = data.reason || 'N/A';
+            document.getElementById('cancel-comments').value = data.comments || 'N/A';
         } catch (error) {
             document.getElementById('reason-loading').innerHTML = 'Error loading cancellation details';
         }

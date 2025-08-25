@@ -1315,6 +1315,18 @@ document.addEventListener('DOMContentLoaded', function () {
                         throw new Error('Authentication required. Please log in again.');
                     }
                     
+                    // Get customer name from profile
+                    let customerName = 'Customer';
+                    try {
+                        const profileResponse = await clientAuthFetch(`${API_BASE_URL}/api/user-profile`);
+                        const profileData = await profileResponse.json();
+                        if (profileData.success && profileData.user) {
+                            customerName = `${profileData.user.first_name || ''} ${profileData.user.last_name || ''}`.trim() || 'Customer';
+                        }
+                    } catch (error) {
+                        console.log('Could not fetch customer name, using default');
+                    }
+                    
                     const response = await fetch(url, {
                         method: method,
                         headers: {
@@ -1327,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             product_id: parseInt(selectedProductId),
                             order_item_id: parseInt(productSelect.options[productSelect.selectedIndex].dataset.orderItemId) || null,
                             publish_status: 0,
-                            customer_name: 'Customer Review'
+                            customer_name: customerName
                         })
                     });
                     const data = await response.json();

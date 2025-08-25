@@ -417,7 +417,7 @@ form label {
 
 /* Form containers */
 #user-orders-container,#cancel-order-form-container,#product-form-container,#collection-form-container,#review-form-container,
-#category-form-container,#slide-form-container,#offer-form-container,#tracking-form-container,#edit-order-form {
+#category-form-container,#view-reason-form-container,#slide-form-container,#offer-form-container,#tracking-form-container,#edit-order-form {
     position: absolute;
     top: 33%;
     left: 33%;
@@ -457,7 +457,7 @@ form textarea:focus {
 
 /* Form containers */
 #user-orders-container,#product-form-container,#collection-form-container,#review-form-container,
-#category-form-container,#offer-form-container,#cancel-order-form-container,#slide-form-container,#tracking-form-container,#edit-order-form {
+#category-form-container,#offer-form-container,#cancel-order-form-container,#view-reason-form-container,#slide-form-container,#tracking-form-container,#edit-order-form {
     margin: 30px auto;
     padding: 30px 35px;
     background-color: #f9fbfc;
@@ -489,7 +489,7 @@ img {
 
 /* Modal effect for forms */
 #user-orders-container,#product-form-container,#collection-form-container,#review-form-container,
-#category-form-container,#offer-form-container,#cancel-order-form-container,#slide-form-container,#tracking-form-container,#edit-order-form {
+#category-form-container,#offer-form-container,#cancel-order-form-container,#view-reason-form-container,#slide-form-container,#tracking-form-container,#edit-order-form {
     animation: slideDown 0.4s ease forwards;
 }
 
@@ -907,7 +907,7 @@ input:checked + .slider:before {
     #category-form-container,
     #collection-form-container,
     #review-form-container,
-    #offer-form-container,
+    #offer-form-container,#view-reason-form-container,
     #slide-form-container,#cancel-order-form-container,
     #tracking-form-container {
         position: fixed;

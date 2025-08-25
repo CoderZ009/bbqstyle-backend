@@ -819,10 +819,9 @@ app.get('/api/user-profile', authenticateToken, (req, res) => {
     });
 });
 
-// Get invoice data for order
-app.get('/api/orders/:orderId/invoice', authenticateToken, (req, res) => {
+// Get invoice data for order (public access for admin)
+app.get('/api/orders/:orderId/invoice', (req, res) => {
     const orderId = req.params.orderId;
-    const userId = req.userId;
 
     // Get order details with customer info
     const orderQuery = `
@@ -831,10 +830,10 @@ app.get('/api/orders/:orderId/invoice', authenticateToken, (req, res) => {
         FROM orders o
         JOIN addresses a ON o.address_id = a.address_id
         JOIN users u ON o.user_id = u.user_id
-        WHERE o.order_id = ? AND o.user_id = ?
+        WHERE o.order_id = ?
     `;
 
-    db.query(orderQuery, [orderId, userId], (err, orderResults) => {
+    db.query(orderQuery, [orderId], (err, orderResults) => {
         if (err) {
             console.error('Database error fetching order:', err);
             return res.status(500).json({ success: false, message: 'Database error' });

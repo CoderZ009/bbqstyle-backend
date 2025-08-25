@@ -1848,13 +1848,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (status === 'pending') {
             return `
-                <button class="accept-order" data-order-id="${orderId}">Accept</button>
-                <button class="cancel-order" data-order-id="${orderId}">Cancel</button>
+                <button class="accept-order" data-order-id="${orderId}" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; margin: 2px;">Accept</button>
+                <button class="cancel-order" data-order-id="${orderId}" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; margin: 2px;">Cancel</button>
             `;
         } else if (status === 'processing') {
             return `
-                <button class="cancel-order" data-order-id="${orderId}">Cancel</button>
-                <button class="add-tracking" data-order-id="${orderId}">Add Tracking</button>
+                <button class="cancel-order" data-order-id="${orderId}" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; margin: 2px;">Cancel</button>
+                <button class="add-tracking" data-order-id="${orderId}" style="background: #007bff; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; margin: 2px;">Add Tracking</button>
             `;
         } else if (status === 'ready') {
             return `
@@ -1867,7 +1867,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         } else if (status === 'cancelled') {
             return `
-                <button class="view-reason" data-order-id="${orderId}">View Reason</button>
+                <button class="view-reason" data-order-id="${orderId}" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">View Reason</button>
             `;
         }
         return '';
@@ -1908,17 +1908,60 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function cancelOrder(orderId) {
-        if (confirm('Are you sure you want to cancel this order?')) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Cancel Order #${orderId}</h2>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="cancel-order-form">
+                        <div class="form-group">
+                            <label>Cancellation Reason:</label>
+                            <select id="cancel-reason" required>
+                                <option value="">Select reason</option>
+                                <option value="Out of stock">Out of stock</option>
+                                <option value="Customer request">Customer request</option>
+                                <option value="Payment issue">Payment issue</option>
+                                <option value="Address issue">Address issue</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Additional Comments:</label>
+                            <textarea id="cancel-comments" rows="3" placeholder="Optional additional comments"></textarea>
+                        </div>
+                        <button type="submit" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel Order</button>
+                    </form>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('.close-modal').onclick = () => modal.remove();
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+        
+        modal.querySelector('#cancel-order-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const reason = document.getElementById('cancel-reason').value;
+            const comments = document.getElementById('cancel-comments').value;
+            
             try {
-                const response = await clientAuthFetch(`${API_BASE_URL}/api/admin/orders/${orderId}/cancel`, { method: 'POST' });
+                const response = await clientAuthFetch(`${API_BASE_URL}/api/admin/orders/${orderId}/cancel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason, additionalComments: comments })
+                });
                 const data = await response.json();
                 if (data.success) {
+                    modal.remove();
                     loadOrders();
                 }
             } catch (error) {
                 console.error('Error cancelling order');
             }
-        }
+        });
     };
 
     function addTracking(orderId) {
@@ -2183,7 +2226,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="close-modal">&times;</span>
                 </div>
                 <div class="modal-body">
-                    <div id="reason-loading" class="text-center py-4">Loading...</div>
+                    <div id="reason-loading" class="text-center py-4"><div class="loading-spinner"></div>Loading...</div>
                     <div id="reason-content" style="display: none;">
                         <div class="form-group">
                             <label>Cancellation Reason:</label>

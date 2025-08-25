@@ -5147,9 +5147,11 @@ app.post('/api/admin/orders/:orderId/cancel', isAuthenticated, async (req, res) 
         }
 
         // Update order status to cancelled with reason and comments
+        const reason = req.body.reason || cancellationData.reason || null;
+        const comments = req.body.additionalComments || cancellationData.additionalComments || null;
         await new Promise((resolve, reject) => {
             db.query('UPDATE orders SET status = "cancelled", cancellation_reason = ?, cancellation_comments = ? WHERE order_id = ?', 
-                [cancellationData.reason || null, cancellationData.additionalComments || null, orderId], (err) => {
+                [reason, comments, orderId], (err) => {
                 if (err) reject(err);
                 else resolve();
             });

@@ -101,6 +101,18 @@ app.options('*', cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// Additional CORS middleware for admin routes
+app.use('/api/admin/*', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -338,19 +350,25 @@ const productUpload = multer({ storage: storage }).any();
 
 // Authentication middleware (for admin users only)
 function isAuthenticated(req, res, next) {
+    console.log('Admin auth check - Headers:', req.headers.authorization);
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
-        return res.status(401).json({ error: 'Unauthorized' });
+        console.log('Admin auth failed - No token provided');
+        return res.status(401).json({ error: 'Unauthorized - No token provided' });
     }
     
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
+        console.log('Admin auth - Decoded token:', decoded);
         if (decoded.email === 'admin@bbqstyle.in' && decoded.isAdmin) {
+            console.log('Admin auth successful');
             return next();
         } else {
-            res.status(401).json({ error: 'Unauthorized' });
+            console.log('Admin auth failed - Invalid admin credentials');
+            res.status(403).json({ error: 'Forbidden - Admin access required' });
         }
     } catch (error) {
+        console.log('Admin auth failed - Token verification error:', error.message);
         res.status(401).json({ error: 'Invalid token' });
     }
 }
@@ -1516,11 +1534,14 @@ app.put('/api/addresses/:id', authenticateToken, (req, res) => {
 
 // Admin Login Route (retained for admin specific login)
 app.post('/admin/login', (req, res) => {
+    console.log('Admin login attempt:', req.body);
     const { email, password } = req.body;
     if (email === 'admin@bbqstyle.in' && password === 'adminhere') {
         const token = jwt.sign({ email, isAdmin: true }, JWT_SECRET, { expiresIn: '12h' });
+        console.log('Admin login successful, token generated');
         res.json({ message: 'Admin login successful', token });
     } else {
+        console.log('Admin login failed - Invalid credentials');
         res.status(401).json({ error: 'Invalid admin credentials' });
     }
 });
@@ -1533,21 +1554,32 @@ app.post('/admin/logout', (req, res) => {
 
 // Admin Session Status Route (retained for admin specific session check)
 app.get('/api/session', (req, res) => {
+    console.log('Session check - Headers:', req.headers.authorization);
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
+        console.log('Session check failed - No token');
         return res.status(401).json({ error: 'Unauthorized' });
     }
     
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
+        console.log('Session check - Decoded:', decoded);
         if (decoded.email === 'admin@bbqstyle.in' && decoded.isAdmin) {
+            console.log('Session check successful');
             res.json({ email: decoded.email });
         } else {
+            console.log('Session check failed - Invalid admin');
             res.status(401).json({ error: 'Unauthorized' });
         }
     } catch (error) {
+        console.log('Session check failed - Token error:', error.message);
         res.status(401).json({ error: 'Invalid token' });
     }
+});
+
+// Test endpoint for admin authentication
+app.get('/api/admin/test', isAuthenticated, (req, res) => {
+    res.json({ message: 'Admin authentication working', timestamp: new Date().toISOString() });
 });
 
 
@@ -4766,7 +4798,42 @@ app.get('/admin/offers', isAuthenticated, (req, res) => {
     });
 });
 
+// Admin API offer management endpoints
+app.get('/api/admin/offers', isAuthenticated, (req, res) => {
+    const search = req.query.search || '';
+    const searchQuery = search ? 'WHERE code LIKE ?' : '';
+    const searchParams = search ? [`%${search}%`] : [];
+
+    db.query(`SELECT * FROM offers ${searchQuery} ORDER BY created_at DESC`, searchParams, (err, offers) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json(offers);
+    });
+});
+
 app.post('/admin/offers', isAuthenticated, (req, res) => {
+    const { code, discount_type, discount_value, offer_limit, is_enabled = true } = req.body;
+
+    if (!code || !discount_type || !discount_value || !offer_limit) {
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    db.query('INSERT INTO offers (code, discount_type, discount_value, offer_limit, is_enabled) VALUES (?, ?, ?, ?, ?)',
+        [code, discount_type, discount_value, offer_limit, is_enabled], (err, result) => {
+            if (err) {
+                if (err.code === 'ER_DUP_ENTRY') {
+                    return res.status(400).json({ error: 'Offer code already exists' });
+                }
+                console.error('Database error:', err);
+                return res.status(500).json({ error: 'Database error' });
+            }
+            res.json({ message: 'Offer created successfully', offerId: result.insertId });
+        });
+});
+
+app.post('/api/admin/offers', isAuthenticated, (req, res) => {
     const { code, discount_type, discount_value, offer_limit, is_enabled = true } = req.body;
 
     if (!code || !discount_type || !discount_value || !offer_limit) {
@@ -4800,7 +4867,42 @@ app.put('/admin/offers/:id', isAuthenticated, (req, res) => {
         });
 });
 
+app.put('/api/admin/offers/:id', isAuthenticated, (req, res) => {
+    const { id } = req.params;
+    const { code, discount_type, discount_value, offer_limit, is_enabled } = req.body;
+
+    db.query('UPDATE offers SET code = ?, discount_type = ?, discount_value = ?, offer_limit = ?, is_enabled = ? WHERE offer_id = ?',
+        [code, discount_type, discount_value, offer_limit, is_enabled, id], (err) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ error: 'Database error' });
+            }
+            res.json({ message: 'Offer updated successfully' });
+        });
+});
+
 app.delete('/admin/offers/:id', isAuthenticated, (req, res) => {
+    const { id } = req.params;
+
+    // First delete usage records, then delete the offer
+    db.query('DELETE FROM offer_usage WHERE offer_id = ?', [id], (usageErr) => {
+        if (usageErr) {
+            console.error('Database error deleting usage records:', usageErr);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        // Now delete the offer
+        db.query('DELETE FROM offers WHERE offer_id = ?', [id], (err) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ error: 'Database error' });
+            }
+            res.json({ message: 'Offer deleted successfully' });
+        });
+    });
+});
+
+app.delete('/api/admin/offers/:id', isAuthenticated, (req, res) => {
     const { id } = req.params;
 
     // First delete usage records, then delete the offer
@@ -4837,7 +4939,36 @@ app.get('/admin/offers/:id/users', isAuthenticated, (req, res) => {
     });
 });
 
+app.get('/api/admin/offers/:id/users', isAuthenticated, (req, res) => {
+    const { id } = req.params;
+
+    db.query(`SELECT u.first_name, u.last_name, u.email, ou.used_at 
+              FROM offer_usage ou 
+              JOIN users u ON ou.user_id = u.user_id 
+              WHERE ou.offer_id = ? 
+              ORDER BY ou.used_at DESC`, [id], (err, users) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json(users);
+    });
+});
+
 app.put('/admin/offers/:id/toggle', isAuthenticated, (req, res) => {
+    const { id } = req.params;
+    const { is_enabled } = req.body;
+
+    db.query('UPDATE offers SET is_enabled = ? WHERE offer_id = ?', [is_enabled, id], (err) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({ message: 'Offer status updated successfully' });
+    });
+});
+
+app.put('/api/admin/offers/:id/toggle', isAuthenticated, (req, res) => {
     const { id } = req.params;
     const { is_enabled } = req.body;
 

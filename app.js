@@ -20,7 +20,42 @@ const bcrypt = require('bcrypt');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
+const nodemailer = require('nodemailer');
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Bluehost SMTP Configuration
+const smtpTransporter = nodemailer.createTransporter({
+    host: process.env.SMTP_HOST || 'mail.bbqstyle.in',
+    port: process.env.SMTP_PORT || 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    },
+    tls: {
+        rejectUnauthorized: false
+    }
+});
+
+// Email sending function
+async function sendEmail(to, subject, html, text = null) {
+    try {
+        const mailOptions = {
+            from: `"BBQ Style" <${process.env.SMTP_USER}>`,
+            to: to,
+            subject: subject,
+            html: html,
+            text: text || html.replace(/<[^>]*>/g, '') // Strip HTML for text version
+        };
+
+        const info = await smtpTransporter.sendMail(mailOptions);
+        console.log('Email sent successfully:', info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error('Email sending failed:', error);
+        return { success: false, error: error.message };
+    }
+}
 
 console.log('Node.js server starting...'); // Added for debugging
 
@@ -33,6 +68,59 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
+});
+
+// SMTP test endpoint (admin only)
+app.post('/api/admin/test-smtp', isAuthenticated, async (req, res) => {
+    try {
+        const testEmailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #28a745;">SMTP Test Successful!</h2>
+                <p>This is a test email to verify that the Bluehost SMTP configuration is working correctly.</p>
+                <div style="background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
+                    <p><strong>Server:</strong> ${process.env.SMTP_HOST}</p>
+                    <p><strong>Port:</strong> ${process.env.SMTP_PORT}</p>
+                    <p><strong>From:</strong> ${process.env.SMTP_USER}</p>
+                    <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+                </div>
+                <p>If you received this email, your SMTP configuration is working properly!</p>
+                <hr style="margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">BBQ Style - SMTP Test Email</p>
+            </div>
+        `;
+
+        const result = await sendEmail(
+            process.env.ADMIN_EMAIL || process.env.SMTP_USER,
+            'SMTP Test - BBQ Style',
+            testEmailHtml
+        );
+
+        if (result.success) {
+            res.json({ 
+                success: true, 
+                message: 'Test email sent successfully', 
+                messageId: result.messageId,
+                config: {
+                    host: process.env.SMTP_HOST,
+                    port: process.env.SMTP_PORT,
+                    user: process.env.SMTP_USER
+                }
+            });
+        } else {
+            res.status(500).json({ 
+                success: false, 
+                error: 'Failed to send test email', 
+                details: result.error 
+            });
+        }
+    } catch (error) {
+        console.error('SMTP test error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'SMTP test failed', 
+            details: error.message 
+        });
+    }
 });
 
 // Keep Render server awake by pinging collections endpoint every 12 minutes
@@ -1422,6 +1510,68 @@ app.post('/api/payment-webhook', async (req, res) => {
                     });
                 });
 
+                // Send payment confirmation email to customer
+                try {
+                    const userQuery = 'SELECT first_name, last_name, email FROM users WHERE user_id = ?';
+                    const userResult = await new Promise((resolve, reject) => {
+                        db.query(userQuery, [tempOrder.user_id], (err, results) => {
+                            if (err) reject(err);
+                            else resolve(results[0]);
+                        });
+                    });
+
+                    if (userResult && userResult.email) {
+                        const paymentEmailHtml = `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                <h2 style="color: #28a745;">Payment Successful - BBQ Style</h2>
+                                <p>Dear ${userResult.first_name} ${userResult.last_name},</p>
+                                <p>Your payment has been successfully processed!</p>
+                                <div style="background: #d4edda; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #28a745;">
+                                    <h3 style="margin: 0 0 10px 0; color: #155724;">Payment Details:</h3>
+                                    <p><strong>Order ID:</strong> #${actualOrderId}</p>
+                                    <p><strong>Amount Paid:</strong> ₹${tempOrder.total_amount}</p>
+                                    <p><strong>Payment Status:</strong> Successful</p>
+                                </div>
+                                <p>Your order is now being processed and you will receive shipping updates soon.</p>
+                                <p>Thank you for choosing BBQ Style!</p>
+                                <hr style="margin: 30px 0;">
+                                <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                            </div>
+                        `;
+
+                        await sendEmail(
+                            userResult.email,
+                            `Payment Successful - Order #${actualOrderId}`,
+                            paymentEmailHtml
+                        );
+
+                        // Send order received notification to admin
+                        const adminEmailHtml = `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                <h2 style="color: #007bff;">New Order Received - BBQ Style</h2>
+                                <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                                    <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
+                                    <p><strong>Order ID:</strong> #${actualOrderId}</p>
+                                    <p><strong>Customer:</strong> ${userResult.first_name} ${userResult.last_name}</p>
+                                    <p><strong>Email:</strong> ${userResult.email}</p>
+                                    <p><strong>Total Amount:</strong> ₹${tempOrder.total_amount}</p>
+                                    <p><strong>Payment Mode:</strong> Online</p>
+                                    <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
+                                </div>
+                                <p>Please process this order in the admin panel.</p>
+                            </div>
+                        `;
+
+                        await sendEmail(
+                            'hardevi143@gmail.com',
+                            `New Order Received - #${actualOrderId}`,
+                            adminEmailHtml
+                        );
+                    }
+                } catch (emailError) {
+                    console.error('Error sending payment confirmation email:', emailError);
+                }
+
                 await new Promise((resolve, reject) => {
                     db.query('DELETE FROM temp_orders WHERE id = ?', [order_id], (err) => {
                         if (err) reject(err);
@@ -1557,6 +1707,72 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
             });
         }
 
+        // Send order confirmation email to customer
+        try {
+            const userQuery = 'SELECT first_name, last_name, email FROM users WHERE user_id = ?';
+            const userResult = await new Promise((resolve, reject) => {
+                db.query(userQuery, [userId], (err, results) => {
+                    if (err) reject(err);
+                    else resolve(results[0]);
+                });
+            });
+
+            if (userResult && userResult.email) {
+                const orderEmailHtml = `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #333;">Order Confirmation - BBQ Style</h2>
+                        <p>Dear ${userResult.first_name} ${userResult.last_name},</p>
+                        <p>Thank you for your order! Your order has been successfully placed.</p>
+                        <div style="background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;">
+                            <h3 style="margin: 0 0 10px 0;">Order Details:</h3>
+                            <p><strong>Order ID:</strong> #${orderId}</p>
+                            <p><strong>Total Amount:</strong> ₹${totalAmount}</p>
+                            <p><strong>Payment Mode:</strong> ${paymentMode}</p>
+                        </div>
+                        <p>We will process your order and send you tracking details once it's shipped.</p>
+                        <p>Thank you for shopping with BBQ Style!</p>
+                        <hr style="margin: 30px 0;">
+                        <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                    </div>
+                `;
+
+                await sendEmail(
+                    userResult.email,
+                    `Order Confirmation - #${orderId}`,
+                    orderEmailHtml
+                );
+            }
+        } catch (emailError) {
+            console.error('Error sending order confirmation email:', emailError);
+        }
+
+        // Send order received notification to admin
+        try {
+            const adminEmailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #007bff;">New Order Received - BBQ Style</h2>
+                    <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                        <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
+                        <p><strong>Order ID:</strong> #${orderId}</p>
+                        <p><strong>Customer:</strong> ${userResult?.first_name} ${userResult?.last_name}</p>
+                        <p><strong>Email:</strong> ${userResult?.email}</p>
+                        <p><strong>Total Amount:</strong> ₹${totalAmount}</p>
+                        <p><strong>Payment Mode:</strong> ${paymentMode}</p>
+                        <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
+                    </div>
+                    <p>Please process this order in the admin panel.</p>
+                </div>
+            `;
+
+            await sendEmail(
+                'hardevi143@gmail.com',
+                `New Order Received - #${orderId}`,
+                adminEmailHtml
+            );
+        } catch (emailError) {
+            console.error('Error sending admin notification email:', emailError);
+        }
+
         res.json({ success: true, orderId: orderId });
 
     } catch (error) {
@@ -1641,6 +1857,129 @@ app.get('/api/session', (req, res) => {
         }
     } catch (error) {
         res.status(401).json({ error: 'Invalid token' });
+    }
+});
+
+// Admin endpoint to send custom emails
+app.post('/api/admin/send-email', isAuthenticated, async (req, res) => {
+    const { to, subject, message, type = 'custom' } = req.body;
+    
+    if (!to || !subject || !message) {
+        return res.status(400).json({ error: 'To, subject, and message are required' });
+    }
+
+    try {
+        let emailHtml;
+        
+        if (type === 'newsletter') {
+            emailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0;">BBQ Style Newsletter</h1>
+                    </div>
+                    <div style="padding: 30px; background: #f8f9fa;">
+                        ${message.replace(/\n/g, '<br>')}
+                    </div>
+                    <div style="background: #333; color: white; padding: 20px; text-align: center;">
+                        <p style="margin: 0;">BBQ Style - India's Premium Clothing Store</p>
+                        <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.8;">Visit us at www.bbqstyle.in</p>
+                    </div>
+                </div>
+            `;
+        } else {
+            emailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #333;">${subject}</h2>
+                    <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                        ${message.replace(/\n/g, '<br>')}
+                    </div>
+                    <hr style="margin: 30px 0;">
+                    <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                </div>
+            `;
+        }
+
+        const result = await sendEmail(to, subject, emailHtml);
+        
+        if (result.success) {
+            res.json({ success: true, message: 'Email sent successfully', messageId: result.messageId });
+        } else {
+            res.status(500).json({ error: 'Failed to send email', details: result.error });
+        }
+    } catch (error) {
+        console.error('Error in admin send email:', error);
+        res.status(500).json({ error: 'Failed to send email' });
+    }
+});
+
+// Admin endpoint to send bulk emails to subscribers
+app.post('/api/admin/send-newsletter', isAuthenticated, async (req, res) => {
+    const { subject, message } = req.body;
+    
+    if (!subject || !message) {
+        return res.status(400).json({ error: 'Subject and message are required' });
+    }
+
+    try {
+        // Get all subscribers
+        const subscribers = await new Promise((resolve, reject) => {
+            db.query('SELECT customer_name, email_id FROM subscribers', (err, results) => {
+                if (err) reject(err);
+                else resolve(results);
+            });
+        });
+
+        if (subscribers.length === 0) {
+            return res.json({ success: true, message: 'No subscribers found', sent: 0 });
+        }
+
+        const emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">BBQ Style Newsletter</h1>
+                </div>
+                <div style="padding: 30px; background: #f8f9fa;">
+                    ${message.replace(/\n/g, '<br>')}
+                </div>
+                <div style="background: #333; color: white; padding: 20px; text-align: center;">
+                    <p style="margin: 0;">BBQ Style - India's Premium Clothing Store</p>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.8;">Visit us at www.bbqstyle.in</p>
+                    <p style="margin: 10px 0 0 0; font-size: 10px; opacity: 0.6;">
+                        <a href="#" style="color: #ccc;">Unsubscribe</a>
+                    </p>
+                </div>
+            </div>
+        `;
+
+        let successCount = 0;
+        let failCount = 0;
+
+        // Send emails with delay to avoid rate limiting
+        for (const subscriber of subscribers) {
+            try {
+                await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+                const result = await sendEmail(subscriber.email_id, subject, emailHtml);
+                if (result.success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (error) {
+                console.error(`Failed to send email to ${subscriber.email_id}:`, error);
+                failCount++;
+            }
+        }
+
+        res.json({ 
+            success: true, 
+            message: `Newsletter sent to ${successCount} subscribers`, 
+            sent: successCount,
+            failed: failCount,
+            total: subscribers.length
+        });
+    } catch (error) {
+        console.error('Error sending newsletter:', error);
+        res.status(500).json({ error: 'Failed to send newsletter' });
     }
 });
 
@@ -2827,6 +3166,201 @@ app.get('/api/orders/:orderId/items', authenticateToken, (req, res) => {
     });
 });
 
+// Update order status with email notifications
+app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) => {
+    const orderId = req.params.orderId;
+    const { status, cancelledBy } = req.body;
+    
+    if (!status) {
+        return res.status(400).json({ error: 'Status is required' });
+    }
+
+    try {
+        // Get order and user details
+        const orderQuery = `
+            SELECT o.*, u.first_name, u.last_name, u.email 
+            FROM orders o 
+            JOIN users u ON o.user_id = u.user_id 
+            WHERE o.order_id = ?
+        `;
+        
+        const orderResult = await new Promise((resolve, reject) => {
+            db.query(orderQuery, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+
+        if (!orderResult) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Update order status
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE orders SET status = ? WHERE order_id = ?', [status, orderId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+
+        // Send status update email to customer
+        if (orderResult.email) {
+            const statusMessages = {
+                'confirmed': { title: 'Order Confirmed', message: 'Your order has been confirmed and is being prepared.', color: '#28a745' },
+                'processing': { title: 'Order Processing', message: 'Your order is currently being processed.', color: '#ffc107' },
+                'ready': { title: 'Order Ready', message: 'Your order is ready and will be shipped soon.', color: '#17a2b8' },
+                'shipped': { title: 'Order Shipped', message: 'Your order is out for delivery. You will receive it soon!', color: '#6f42c1' },
+                'delivered': { title: 'Order Delivered', message: 'Your order has been delivered. Please share your review!', color: '#28a745' },
+                'cancelled': { title: 'Order Cancelled', message: `Your order has been cancelled${cancelledBy ? ` by ${cancelledBy}` : ''}.`, color: '#dc3545' }
+            };
+
+            const statusInfo = statusMessages[status] || { title: 'Order Status Updated', message: `Your order status has been updated to: ${status}`, color: '#6c757d' };
+
+            const statusEmailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: ${statusInfo.color};">${statusInfo.title} - BBQ Style</h2>
+                    <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                    <p>${statusInfo.message}</p>
+                    <div style="background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid ${statusInfo.color};">
+                        <h3 style="margin: 0 0 10px 0;">Order Details:</h3>
+                        <p><strong>Order ID:</strong> #${orderId}</p>
+                        <p><strong>Status:</strong> ${status.toUpperCase()}</p>
+                        <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
+                    </div>
+                    ${status === 'delivered' ? '<p>We hope you love your purchase! Please consider leaving a review.</p>' : ''}
+                    <p>Thank you for shopping with BBQ Style!</p>
+                    <hr style="margin: 30px 0;">
+                    <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                </div>
+            `;
+
+            await sendEmail(
+                orderResult.email,
+                `${statusInfo.title} - Order #${orderId}`,
+                statusEmailHtml
+            );
+        }
+
+        // Send cancellation notification to admin if cancelled
+        if (status === 'cancelled') {
+            const adminEmailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #dc3545;">Order Cancelled - BBQ Style</h2>
+                    <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;">
+                        <h3 style="margin: 0 0 15px 0;">Cancelled Order Details:</h3>
+                        <p><strong>Order ID:</strong> #${orderId}</p>
+                        <p><strong>Customer:</strong> ${orderResult.first_name} ${orderResult.last_name}</p>
+                        <p><strong>Email:</strong> ${orderResult.email}</p>
+                        <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
+                        <p><strong>Cancelled By:</strong> ${cancelledBy || 'System'}</p>
+                        <p><strong>Cancellation Date:</strong> ${new Date().toLocaleString()}</p>
+                    </div>
+                </div>
+            `;
+
+            await sendEmail(
+                'hardevi143@gmail.com',
+                `Order Cancelled - #${orderId}`,
+                adminEmailHtml
+            );
+        }
+
+        res.json({ success: true, message: 'Order status updated successfully' });
+    } catch (error) {
+        console.error('Error updating order status:', error);
+        res.status(500).json({ error: 'Failed to update order status' });
+    }
+});
+
+// Cancel order by customer
+app.put('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
+    const orderId = req.params.orderId;
+    const userId = req.userId;
+
+    try {
+        // Verify order belongs to user and can be cancelled
+        const orderQuery = `
+            SELECT o.*, u.first_name, u.last_name, u.email 
+            FROM orders o 
+            JOIN users u ON o.user_id = u.user_id 
+            WHERE o.order_id = ? AND o.user_id = ? AND o.status IN ('pending', 'confirmed')
+        `;
+        
+        const orderResult = await new Promise((resolve, reject) => {
+            db.query(orderQuery, [orderId, userId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+
+        if (!orderResult) {
+            return res.status(404).json({ error: 'Order not found or cannot be cancelled' });
+        }
+
+        // Update order status to cancelled
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE orders SET status = ? WHERE order_id = ?', ['cancelled', orderId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+
+        // Send cancellation email to customer
+        if (orderResult.email) {
+            const cancelEmailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #dc3545;">Order Cancelled - BBQ Style</h2>
+                    <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                    <p>Your order has been successfully cancelled as requested.</p>
+                    <div style="background: #f8d7da; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;">
+                        <h3 style="margin: 0 0 10px 0;">Cancelled Order Details:</h3>
+                        <p><strong>Order ID:</strong> #${orderId}</p>
+                        <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
+                        <p><strong>Cancelled By:</strong> You</p>
+                    </div>
+                    <p>If you paid online, your refund will be processed within 5-7 business days.</p>
+                    <p>Thank you for choosing BBQ Style!</p>
+                    <hr style="margin: 30px 0;">
+                    <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                </div>
+            `;
+
+            await sendEmail(
+                orderResult.email,
+                `Order Cancelled - #${orderId}`,
+                cancelEmailHtml
+            );
+        }
+
+        // Send cancellation notification to admin
+        const adminEmailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #dc3545;">Order Cancelled by Customer - BBQ Style</h2>
+                <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;">
+                    <h3 style="margin: 0 0 15px 0;">Cancelled Order Details:</h3>
+                    <p><strong>Order ID:</strong> #${orderId}</p>
+                    <p><strong>Customer:</strong> ${orderResult.first_name} ${orderResult.last_name}</p>
+                    <p><strong>Email:</strong> ${orderResult.email}</p>
+                    <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
+                    <p><strong>Cancelled By:</strong> Customer</p>
+                    <p><strong>Cancellation Date:</strong> ${new Date().toLocaleString()}</p>
+                </div>
+            </div>
+        `;
+
+        await sendEmail(
+            'hardevi143@gmail.com',
+            `Order Cancelled by Customer - #${orderId}`,
+            adminEmailHtml
+        );
+
+        res.json({ success: true, message: 'Order cancelled successfully' });
+    } catch (error) {
+        console.error('Error cancelling order:', error);
+        res.status(500).json({ error: 'Failed to cancel order' });
+    }
+});
+
 // Get invoice template
 app.get('/api/admin/invoice-template', isAuthenticated, (req, res) => {
     const query = 'SELECT * FROM invoice_template ORDER BY id DESC LIMIT 1';
@@ -3003,14 +3537,14 @@ app.get('/api/subscribers', isAuthenticated, (req, res) => {
 });
 
 // Add new subscriber (no authentication required)
-app.post('/api/subscribers', (req, res) => {
+app.post('/api/subscribers', async (req, res) => {
     const { customer_name, email_id } = req.body;
     if (!customer_name || !email_id) {
         return res.status(400).json({ error: 'Name and email are required' });
     }
 
     // Check if email already exists
-    db.query('SELECT * FROM subscribers WHERE email_id = ?', [email_id], (checkErr, existing) => {
+    db.query('SELECT * FROM subscribers WHERE email_id = ?', [email_id], async (checkErr, existing) => {
         if (checkErr) {
             console.error('Database check error:', checkErr);
             return res.status(500).json({ error: 'Database error' });
@@ -3021,14 +3555,107 @@ app.post('/api/subscribers', (req, res) => {
         }
 
         const query = 'INSERT INTO subscribers (customer_name, email_id) VALUES (?, ?)';
-        db.query(query, [customer_name, email_id], (err, result) => {
+        db.query(query, [customer_name, email_id], async (err, result) => {
             if (err) {
                 console.error('Database insert error:', err);
                 return res.status(500).json({ error: 'Database error' });
             }
+
+            // Send welcome email to subscriber
+            try {
+                const welcomeEmailHtml = `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #333;">Welcome to BBQ Style Newsletter!</h2>
+                        <p>Dear ${customer_name},</p>
+                        <p>Thank you for subscribing to our newsletter! You're now part of the BBQ Style family.</p>
+                        <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                            <h3 style="color: #495057;">What to expect:</h3>
+                            <ul style="color: #6c757d;">
+                                <li>Latest fashion trends and collections</li>
+                                <li>Exclusive offers and discounts</li>
+                                <li>Early access to new arrivals</li>
+                                <li>Style tips and fashion advice</li>
+                            </ul>
+                        </div>
+                        <p>Stay tuned for amazing updates from BBQ Style!</p>
+                        <hr style="margin: 30px 0;">
+                        <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                    </div>
+                `;
+
+                await sendEmail(
+                    email_id,
+                    'Welcome to BBQ Style Newsletter!',
+                    welcomeEmailHtml
+                );
+            } catch (emailError) {
+                console.error('Error sending welcome email:', emailError);
+            }
+
             res.status(201).json({ message: 'Subscriber added', subscriberId: result.insertId });
         });
     });
+});
+
+// Contact form endpoint
+app.post('/api/contact', async (req, res) => {
+    const { name, email, subject, message } = req.body;
+    
+    if (!name || !email || !subject || !message) {
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    try {
+        // Send email to admin
+        const contactEmailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #333;">New Contact Form Submission</h2>
+                <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                    <p><strong>Name:</strong> ${name}</p>
+                    <p><strong>Email:</strong> ${email}</p>
+                    <p><strong>Subject:</strong> ${subject}</p>
+                    <p><strong>Message:</strong></p>
+                    <div style="background: white; padding: 15px; border-left: 4px solid #007bff; margin-top: 10px;">
+                        ${message.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+                <p style="color: #666; font-size: 12px;">This message was sent from the BBQ Style contact form.</p>
+            </div>
+        `;
+
+        await sendEmail(
+            process.env.ADMIN_EMAIL || process.env.SMTP_USER,
+            `Contact Form: ${subject}`,
+            contactEmailHtml
+        );
+
+        // Send confirmation email to user
+        const confirmationEmailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #333;">Thank you for contacting BBQ Style!</h2>
+                <p>Dear ${name},</p>
+                <p>We have received your message and will get back to you within 24-48 hours.</p>
+                <div style="background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
+                    <p><strong>Your message:</strong></p>
+                    <p style="font-style: italic;">${message}</p>
+                </div>
+                <p>Thank you for reaching out to us!</p>
+                <hr style="margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+            </div>
+        `;
+
+        await sendEmail(
+            email,
+            'Thank you for contacting BBQ Style',
+            confirmationEmailHtml
+        );
+
+        res.json({ success: true, message: 'Message sent successfully' });
+    } catch (error) {
+        console.error('Error sending contact form email:', error);
+        res.status(500).json({ error: 'Failed to send message' });
+    }
 });
 
 // Add a new review

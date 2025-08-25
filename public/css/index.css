@@ -530,18 +530,7 @@ section {
     margin-bottom: 1.5rem;
 }
 
-.review-avatar {
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-pink) 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--white);
-    font-size: 1.5rem;
-    margin-right: 1rem;
-}
+
 
 .review-name {
     font-size: 1.2rem;
@@ -569,7 +558,7 @@ section {
     display: flex;
     justify-content: space-between;
     pointer-events: none;
-    padding-right: 50px;
+    padding: 0;
 }
 
 .review-prev-btn, .review-next-btn {
@@ -584,6 +573,14 @@ section {
     transition: var(--transition-normal);
     box-shadow: var(--shadow-md);
     pointer-events: auto;
+}
+
+.review-prev-btn {
+    left: 0;
+}
+
+.review-next-btn {
+    right: 0;
 }
 
 .review-prev-btn:hover, .review-next-btn:hover {
@@ -605,11 +602,7 @@ section {
         min-width: 280px;
     }
     
-    .review-avatar {
-        width: 50px;
-        height: 50px;
-        font-size: 1.2rem;
-    }
+
     
     .review-name {
         font-size: 1.1rem;
@@ -664,8 +657,9 @@ section {
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.9);
     border: none;
-    color: #333;
+    color: #000000;
     font-size: 1.5rem;
+    font-weight: bold;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -802,8 +796,10 @@ section {
 }
 
 .piku {
-    width: 280px;
-    height: 256px;
+    width: 280px !important;
+    height: 256px !important;
+    object-fit: fill !important;
+    display:block !important;
 }
 
 .txt {
@@ -1018,6 +1014,13 @@ section {
     background-color: white;
     border-radius: 10px;
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.47);
+}
+
+@media (max-width: 350px) {
+    .rv {
+        min-width: 100px;
+        max-width: 100px;
+    }
 }
 
 

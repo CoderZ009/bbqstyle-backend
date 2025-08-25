@@ -136,22 +136,47 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 `;
             }
-            function displayProducts(productsToDisplay) {
+            async function displayProducts(productsToDisplay) {
                 if (!searchResults) return;
+                
+                // Show loading spinner with CSS animation
+                if (!document.getElementById('spinner-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'spinner-styles';
+                    style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+                    document.head.appendChild(style);
+                }
+                
+                searchResults.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                        <div style="display: inline-block; width: 24px; height: 24px; border: 3px solid #f3f4f6; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                        <p style="margin-top: 15px; color: #6b7280; font-size: 14px;">Loading products...</p>
+                    </div>
+                `;
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
                 searchResults.innerHTML = '';
                 if (productsToDisplay.length === 0) {
                     searchResults.innerHTML = '<p style="grid-column: 1 / -1; text-align: center;">No products found matching your search.</p>';
                     return;
                 }
+                
                 // Get wishlist from localStorage
                 const localWishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
                 const userWishlist = localWishlist.map(item => item.id);
-                productsToDisplay.forEach(product => {
+                
+                // Load products one by one
+                for (let i = 0; i < productsToDisplay.length; i++) {
+                    const product = productsToDisplay[i];
                     const productCard = document.createElement('div');
                     productCard.className = 'cm';
                     productCard.innerHTML = createProductCardHtml(product, userWishlist);
                     searchResults.appendChild(productCard);
-                });
+                    
+                    // Small delay between products
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
                 // Check cart status and update buttons
                 for (const product of productsToDisplay) {
                     const inCart = checkProductInCart(product.product_id);
@@ -216,10 +241,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }
             // Initialize with all products
-            document.addEventListener('productsLoaded', () => {
+            document.addEventListener('productsLoaded', async () => {
                 currentProducts = window.products;
                 currentPage = 1;
-                renderPage();
+                await renderPage();
             });
             // Toggle search overlay
             searchBtn.addEventListener('click', () => {
@@ -258,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     performSearch();
                 }
             });
-            function performSearch() {
+            async function performSearch() {
                 const searchTerm = searchInput.value.toLowerCase();
                 const activeFilter = document.querySelector('.filter-option.active').textContent;
                 let filteredProducts = window.products;
@@ -276,12 +301,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 currentProducts = filteredProducts;
                 currentPage = 1;
-                renderPage();
+                await renderPage();
                 searchContainer.classList.remove('active');
                 bgOverlay.classList.remove('active');
             }
-            function renderPage() {
-                displayProducts(currentProducts.slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage));
+            async function renderPage() {
+                await displayProducts(currentProducts.slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage));
                 renderPaginationControls();
             }
             function renderPaginationControls() {

@@ -238,30 +238,51 @@ document.addEventListener('DOMContentLoaded', function () {
     `;
   }
   // Function to update UI based on login status
+  // Show section loading spinner
+  function showSectionSpinner(containerId, message = 'Loading...') {
+    const container = document.getElementById(containerId);
+    if (container) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+          <div style="display: inline-block; width: 24px; height: 24px; border: 3px solid #f3f4f6; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+          <p style="margin-top: 15px; color: #6b7280; font-size: 14px;">${message}</p>
+        </div>
+      `;
+    }
+  }
+
   // Fetch and render new arrival products
   async function fetchNewArrivals() {
+    const container = document.getElementById('new-arrivals-container');
+    if (!container) return;
+    
+    showSectionSpinner('new-arrivals-container', 'Loading new arrivals...');
+    
     try {
       const productsResponse = await axios.get(`${API_BASE_URL}/api/public/new-arrivals`);
       const products = productsResponse.data;
       // Get wishlist from localStorage
       const localWishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
       const userWishlist = localWishlist.map(item => item.id);
-      const container = document.getElementById('new-arrivals-container');
-      if (!container) return;
-      container.innerHTML = ''; // Clear existing content
+      
+      container.innerHTML = ''; // Clear loading spinner
       if (products.length === 0) {
         container.innerHTML = '<p>No new arrivals found.</p>';
         return;
       }
-      products.forEach(product => {
+      
+      // Load products one by one
+      for (let i = 0; i < products.length; i++) {
+        const product = products[i];
         const productCard = document.createElement('div');
         productCard.className = 'cm';
-        // Pass userWishlist to createProductCardHtml
         productCard.innerHTML = createProductCardHtml(product, false, userWishlist);
         container.appendChild(productCard);
-        // Add direct event listeners to buttons
+        
+        // Add event listeners
         const cartBtn = productCard.querySelector('.cart-btn');
         const wishlistBtn = productCard.querySelector('.wishlist-btn, .remove-from-wishlist-btn');
+        
         if (cartBtn) {
           cartBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -280,6 +301,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
           });
         }
+        
         if (wishlistBtn) {
           wishlistBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -301,7 +323,11 @@ document.addEventListener('DOMContentLoaded', function () {
             }
           });
         }
-      });
+        
+        // Small delay between products
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
       // Check cart status and update buttons
       for (const product of products) {
         const inCart = checkProductInCart(product.product_id);
@@ -356,17 +382,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   // Fetch and render customer reviews as slideshow
-  function fetchReviews() {
-    axios.get(`${API_BASE_URL}/api/public/reviews`)
-      .then(response => {
-        const reviews = response.data;
-        const container = document.getElementById('reviews-container');
-        if (!container) return;
-        container.innerHTML = ''; // Clear existing content
-        if (reviews.length === 0) {
-          container.innerHTML = '<p class="text-center text-gray-500">No reviews available.</p>';
-          return;
-        }
+  async function fetchReviews() {
+    const container = document.getElementById('reviews-container');
+    if (!container) return;
+    
+    showSectionSpinner('reviews-container', 'Loading reviews...');
+    
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/public/reviews`);
+      const reviews = response.data;
+      
+      container.innerHTML = ''; // Clear loading spinner
+      if (reviews.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-500">No reviews available.</p>';
+        return;
+      }
         // Create slider structure
         const sliderWrapper = document.createElement('div');
         sliderWrapper.className = 'reviews-slider-wrapper';
@@ -382,11 +412,13 @@ document.addEventListener('DOMContentLoaded', function () {
         container.appendChild(sliderWrapper);
         const trackContainer = document.getElementById('reviews-track');
         if (!trackContainer) return;
-        reviews.forEach((review, index) => {
+        // Load reviews one by one
+        for (let i = 0; i < reviews.length; i++) {
+          const review = reviews[i];
           // Generate star rating HTML
           let starsHtml = '';
-          for (let i = 0; i < 5; i++) {
-            if (i < review.star_rating) {
+          for (let j = 0; j < 5; j++) {
+            if (j < review.star_rating) {
               starsHtml += '<i class="fas fa-star"></i>';
             } else {
               starsHtml += '<i class="far fa-star"></i>';
@@ -396,11 +428,8 @@ document.addEventListener('DOMContentLoaded', function () {
           reviewCard.className = 'review-card';
           reviewCard.innerHTML = `
             <div class="review-header">
-              <div class="review-avatar">
-                <i class="fas fa-user"></i>
-              </div>
               <div class="review-info">
-                <h4 class="review-name">${review.first_name || 'Anonymous'}</h4>
+                <h4 class="review-name">${review.customer_name || review.first_name || 'Anonymous'}</h4>
                 <div class="review-rating">
                   ${starsHtml}
                 </div>
@@ -411,7 +440,10 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
           `;
           trackContainer.appendChild(reviewCard);
-        });
+          
+          // Small delay between reviews
+          await new Promise(resolve => setTimeout(resolve, 150));
+        }
         // Initialize slider controls
         let currentPosition = 0;
         const cardWidth = 350;
@@ -433,10 +465,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const prevBtn = document.getElementById('review-prev');
         if (nextBtn) nextBtn.addEventListener('click', slideNext);
         if (prevBtn) prevBtn.addEventListener('click', slidePrev);
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Error fetching reviews:', error);
-      });
+        container.innerHTML = '<p class="text-center text-gray-500">Error loading reviews.</p>';
+      }
   };
   // Newsletter form submission handler
   const newsletterForm = document.getElementById('newsletter-form');

@@ -35,16 +35,15 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Keep server awake by sending request every 12 minutes
-setInterval(() => {
-    const https = require('https');
-    const url = process.env.BASE_URL || 'https://bbqstyle-backend.onrender.com';
-    
-    https.get(`${url}/health`, (res) => {
-        console.log(`Keep-alive ping: ${res.statusCode}`);
-    }).on('error', (err) => {
-        console.log('Keep-alive ping failed:', err.message);
-    });
+// Keep Render server awake by pinging collections endpoint every 12 minutes
+setInterval(async () => {
+    try {
+        const url = process.env.BASE_URL || 'https://bbqstyle-backend.onrender.com';
+        const response = await axios.get(`${url}/api/public/collections`);
+        console.log(`Keep-alive ping successful: ${response.status}`);
+    } catch (error) {
+        console.log('Keep-alive ping failed:', error.message);
+    }
 }, 12 * 60 * 1000); // 12 minutes
 
 const port = process.env.PORT || 3000;
@@ -91,12 +90,17 @@ db.getConnection((err, connection) => {
 app.use(cors({
     origin: ['http://localhost:3000', 'https://www.bbqstyle.in', 'https://bbqstyle.in', 'https://admin.bbqstyle.in', 'https://bbqstyle-backend.onrender.com'],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Handle preflight requests
-app.options('*', cors());
+app.options('*', cors({
+    origin: ['http://localhost:3000', 'https://www.bbqstyle.in', 'https://bbqstyle.in', 'https://admin.bbqstyle.in', 'https://bbqstyle-backend.onrender.com'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -413,7 +417,7 @@ app.post('/api/register', (req, res) => {
                             console.error('Database error during user insertion:', insertErr);
                             return res.status(500).json({ success: false, message: 'Database error' });
                         }
-                        const token = jwt.sign({ userId: result.insertId, email: email || null, mobile: mobile }, JWT_SECRET, { expiresIn: '12h' });
+                        const token = jwt.sign({ userId: result.insertId, email: email || null, mobile: mobile }, JWT_SECRET, { expiresIn: '15d' });
                         res.status(201).json({ success: true, message: 'Registration successful', token, user: { first_name, last_name, email: email || null, mobile } });
                     }
                 );
@@ -428,7 +432,7 @@ app.post('/api/register', (req, res) => {
                         console.error('Database error during user insertion:', insertErr);
                         return res.status(500).json({ success: false, message: 'Database error' });
                     }
-                    const token = jwt.sign({ userId: result.insertId, email: email || null, mobile: mobile }, JWT_SECRET, { expiresIn: '12h' });
+                    const token = jwt.sign({ userId: result.insertId, email: email || null, mobile: mobile }, JWT_SECRET, { expiresIn: '15d' });
                     res.status(201).json({ success: true, message: 'Registration successful', token, user: { first_name, last_name, email: email || null, mobile } });
                 }
             );
@@ -543,11 +547,11 @@ app.post('/api/mobile-login-password', (req, res) => {
             Session.create({
                 sid: sessionToken,
                 data: JSON.stringify(sessionData),
-                expires: new Date(Date.now() + 12 * 60 * 60 * 1000)
+                expires: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
             })
                 .then(() => {
                     res.cookie('session_token', sessionToken, {
-                        maxAge: 12 * 60 * 60 * 1000,
+                        maxAge: 15 * 24 * 60 * 60 * 1000,
                         httpOnly: true,
                         sameSite: 'None',
                         secure: true
@@ -595,17 +599,17 @@ app.post('/api/mobile-login-direct', async (req, res) => {
         await Session.create({
             sid: sessionToken,
             data: JSON.stringify(sessionData),
-            expires: new Date(Date.now() + 12 * 60 * 60 * 1000)
+            expires: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
         });
 
         res.cookie('session_token', sessionToken, {
-            maxAge: 12 * 60 * 60 * 1000,
+            maxAge: 15 * 24 * 60 * 60 * 1000,
             httpOnly: true,
             sameSite: 'Lax',
             secure: process.env.NODE_ENV === 'production'
         });
 
-        const token = jwt.sign({ userId: user.user_id, mobile: user.mobile }, JWT_SECRET, { expiresIn: '12h' });
+        const token = jwt.sign({ userId: user.user_id, mobile: user.mobile }, JWT_SECRET, { expiresIn: '15d' });
         res.json({ success: true, message: 'Login successful', token });
     } catch (error) {
         console.error('Error during direct login:', error);
@@ -663,17 +667,17 @@ app.post('/api/mobile-login-otp', async (req, res) => {
         await Session.create({
             sid: sessionToken,
             data: JSON.stringify(sessionData),
-            expires: new Date(Date.now() + 12 * 60 * 60 * 1000)
+            expires: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
         });
 
         res.cookie('session_token', sessionToken, {
-            maxAge: 12 * 60 * 60 * 1000,
+            maxAge: 15 * 24 * 60 * 60 * 1000,
             httpOnly: true,
             sameSite: 'Lax',
             secure: process.env.NODE_ENV === 'production'
         });
 
-        const token = jwt.sign({ userId: user.user_id, mobile: user.mobile }, JWT_SECRET, { expiresIn: '12h' });
+        const token = jwt.sign({ userId: user.user_id, mobile: user.mobile }, JWT_SECRET, { expiresIn: '15d' });
         res.json({ success: true, message: 'Login successful', token });
     } catch (error) {
         console.error('Error during OTP login:', error);
@@ -715,11 +719,11 @@ app.post('/api/login', (req, res) => {
             Session.create({
                 sid: sessionToken,
                 data: JSON.stringify(sessionData),
-                expires: new Date(Date.now() + 12 * 60 * 60 * 1000) // 12 hours from now
+                expires: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) // 15 days from now
             })
                 .then(() => {
                     res.cookie('session_token', sessionToken, {
-                        maxAge: 12 * 60 * 60 * 1000, // 12 hours
+                        maxAge: 15 * 24 * 60 * 60 * 1000, // 15 days
                         httpOnly: true,
                         sameSite: 'Lax',
                         secure: process.env.NODE_ENV === 'production'
@@ -728,7 +732,7 @@ app.post('/api/login', (req, res) => {
                     req.session.user = { id: user.user_id, email: user.email, first_name: user.first_name, last_name: user.last_name };
                     req.session.loggedIn = true;
                     
-                    const token = jwt.sign({ userId: user.user_id, email: user.email }, JWT_SECRET, { expiresIn: '12h' });
+                    const token = jwt.sign({ userId: user.user_id, email: user.email }, JWT_SECRET, { expiresIn: '15d' });
                     console.log('User logged in. Session Token:', sessionToken, 'userId:', sessionData.userId);
                     res.json({ success: true, message: 'Login successful', token, user: { first_name: user.first_name, last_name: user.last_name, email: user.email } });
                 })
@@ -1125,7 +1129,7 @@ app.post('/api/create-guest-account', async (req, res) => {
         });
 
         res.cookie('session_token', sessionToken, {
-            maxAge: 12 * 60 * 60 * 1000,
+            maxAge: 15 * 24 * 60 * 60 * 1000,
             httpOnly: true,
             sameSite: 'Lax',
             secure: process.env.NODE_ENV === 'production'
@@ -3216,6 +3220,7 @@ app.get('/api/public/products/dm/wdm', (req, res) => {
         LOWER(col.collection_name) = "women's collection"
         and
         LOWER(p.title) LIKE "%wool%"
+        LOWER(p.title) LIKE "%pashmina%"
         GROUP BY p.product_id
         ORDER BY p.product_id DESC
     `;
@@ -4873,6 +4878,49 @@ app.post('/api/addresses', authenticateToken, (req, res) => {
     }
 });
 
+// Get order cancellation details
+app.get('/api/orders/:id/cancellation', authenticateToken, (req, res) => {
+    const orderId = req.params.id;
+    const userId = req.userId;
+    
+    db.query('SELECT cancellation_reason, cancellation_comments FROM orders WHERE order_id = ? AND user_id = ?', [orderId, userId], (err, results) => {
+        if (err) {
+            console.error('Database error fetching cancellation details:', err);
+            return res.status(500).json({ success: false, message: 'Database error' });
+        }
+        if (results.length === 0) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        
+        const order = results[0];
+        res.json({
+            reason: order.cancellation_reason,
+            comments: order.cancellation_comments
+        });
+    });
+});
+
+// Admin get order cancellation details
+app.get('/api/admin/orders/:id/cancellation', isAuthenticated, (req, res) => {
+    const orderId = req.params.id;
+    
+    db.query('SELECT cancellation_reason, cancellation_comments FROM orders WHERE order_id = ?', [orderId], (err, results) => {
+        if (err) {
+            console.error('Database error fetching cancellation details:', err);
+            return res.status(500).json({ success: false, message: 'Database error' });
+        }
+        if (results.length === 0) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        
+        const order = results[0];
+        res.json({
+            reason: order.cancellation_reason,
+            comments: order.cancellation_comments
+        });
+    });
+});
+
 // Orders API Endpoints (updated to work with guest accounts)
 app.post('/api/orders', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1] || req.cookies?.session_token;
@@ -5098,9 +5146,10 @@ app.post('/api/admin/orders/:orderId/cancel', isAuthenticated, async (req, res) 
             });
         }
 
-        // Update order status to cancelled
+        // Update order status to cancelled with reason and comments
         await new Promise((resolve, reject) => {
-            db.query('UPDATE orders SET status = "cancelled" WHERE order_id = ?', [orderId], (err) => {
+            db.query('UPDATE orders SET status = "cancelled", cancellation_reason = ?, cancellation_comments = ? WHERE order_id = ?', 
+                [cancellationData.reason || null, cancellationData.additionalComments || null, orderId], (err) => {
                 if (err) reject(err);
                 else resolve();
             });

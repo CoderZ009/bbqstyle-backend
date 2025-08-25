@@ -1,3 +1,22 @@
+// Helper function to make authenticated requests
+function clientAuthFetch(url, options = {}) {
+    const token = localStorage.getItem('userToken');
+    if (!token) {
+        return Promise.reject(new Error('No authentication token'));
+    }
+    
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+    
+    return fetch(url, {
+        ...options,
+        headers
+    });
+}
+
 // Toast notification function
 function showToast(message, link = null) {
     let toast = document.getElementById('toast');
@@ -48,9 +67,47 @@ if (!document.getElementById('loading-styles')) {
     `;
     document.head.appendChild(style);
 }
+
+// Universal button loading handler for account page buttons
+function addUniversalButtonLoading() {
+    document.addEventListener('click', function(e) {
+        const button = e.target.closest('button');
+        if (!button) return;
+        
+        // Skip if button is already handled or is a close/cancel button
+        if (button.disabled || 
+            button.classList.contains('close-modal') ||
+            button.textContent.toLowerCase().includes('cancel') ||
+            button.textContent.toLowerCase().includes('close') ||
+            button.type === 'button' && !button.onclick) return;
+            
+        // Check if button is in account dashboard
+        const accountDashboard = document.getElementById('account-dashboard');
+        if (accountDashboard && accountDashboard.contains(button)) {
+            // Add loading for buttons that make API calls
+            if (button.classList.contains('btn-primary') ||
+                button.classList.contains('btn-secondary') ||
+                button.classList.contains('btn-danger') ||
+                button.type === 'submit') {
+                
+                setButtonLoading(button, true);
+                
+                // Auto-remove loading after 3 seconds as fallback
+                setTimeout(() => {
+                    if (button.disabled) {
+                        setButtonLoading(button, false);
+                    }
+                }, 3000);
+            }
+        }
+    });
+}
 document.addEventListener('DOMContentLoaded', function () {
     // Set axios to send cookies with requests
     axios.defaults.withCredentials = true;
+    
+    // Initialize universal button loading
+    addUniversalButtonLoading();
     // DOM Elements
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
@@ -629,6 +686,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 ${(order.status !== 'pending' && order.status !== 'processing' && order.status !== 'cancelled') ? `<button class="btn-track" data-order-id="${order.order_id}" data-tracking-link="${order.tracking_link || ''}">Track Order</button>` : ''}
                                 <button class="btn-details view-order-details" data-order-id="${order.order_id}">View Details</button>
                                 ${(order.status === 'pending' || order.status === 'processing') ? `<button class="btn-cancel" data-order-id="${order.order_id}">Cancel Order</button>` : ''}
+                                ${order.status === 'cancelled' ? `<button class="btn-view-reason" data-order-id="${order.order_id}">View Reason</button>` : ''}
                                 ${order.status === 'delivered' ? `<button class="btn-review" data-order-id="${order.order_id}">Write Review</button>` : ''}
                                 ${order.status === 'delivered' ? `<button class="btn-return" data-order-id="${order.order_id}" style="background-color: #dc3545; border-color: #dc3545;">Return Order</button>` : ''}
                                 ${(order.status === 'delivered' || order.status === 'cancelled') ? `<button class="btn-reorder" data-order-id="${order.order_id}">Reorder</button>` : ''}
@@ -704,6 +762,13 @@ document.addEventListener('DOMContentLoaded', function () {
             e.preventDefault();
             const orderId = e.target.dataset.orderId;
             showOrderDetails(orderId);
+        }
+        
+        // View cancellation reason
+        if (e.target.classList.contains('btn-view-reason')) {
+            e.preventDefault();
+            const orderId = e.target.dataset.orderId;
+            showCancellationReason(orderId);
         }
         // Track order
         if (e.target.classList.contains('btn-track')) {
@@ -1173,27 +1238,40 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                     `;
                     productCard.style.display = 'block';
-                    // Check if review already exists
+                    // Check for existing review to allow editing
+                    const ratingSelect = modal.querySelector('#review-rating');
+                    const commentTextarea = modal.querySelector('#review-comment');
+                    
                     try {
-                        const reviewResponse = await clientAuthFetch(`${API_BASE_URL}/api/reviews?order_item_id=${item.order_item_id}`);
-                        if (!reviewResponse.ok) {
-                            throw new Error('Failed to check existing review');
-                        }
-                        const reviews = await reviewResponse.json();
-                        const existingReview = reviews.find(r => r.order_item_id == item.order_item_id);
-                        const reviewData = { exists: !!existingReview, review: existingReview };
-                        if (reviewData.exists) {
-                            // Populate existing review data
-                            modal.querySelector('#review-rating').value = reviewData.review.star_rating;
-                            modal.querySelector('#review-comment').value = reviewData.review.review_text;
-                            submitBtn.textContent = 'Update Review';
+                        const reviewResponse = await fetch(`${API_BASE_URL}/api/public/reviews?product_id=${item.product_id}`);
+                        if (reviewResponse.ok) {
+                            const reviews = await reviewResponse.json();
+                            const existingReview = reviews.find(r => r.order_item_id == item.order_item_id);
+                            if (existingReview) {
+                                // Populate form with existing review
+                                ratingSelect.value = existingReview.star_rating;
+                                commentTextarea.value = existingReview.review_text;
+                                submitBtn.textContent = 'Update Review';
+                                console.log('Found existing review:', existingReview);
+                            } else {
+                                // Reset form for new review
+                                ratingSelect.value = '';
+                                commentTextarea.value = '';
+                                submitBtn.textContent = 'Submit Review';
+                                console.log('No existing review found');
+                            }
                         } else {
-                            // Clear form for new review
-                            reviewForm.reset();
+                            // Reset form for new review
+                            ratingSelect.value = '';
+                            commentTextarea.value = '';
                             submitBtn.textContent = 'Submit Review';
                         }
                     } catch (error) {
-                        console.error('Error checking existing review:', error);
+                        console.error('Error checking review:', error);
+                        // Reset form for new review
+                        ratingSelect.value = '';
+                        commentTextarea.value = '';
+                        submitBtn.textContent = 'Submit Review';
                     }
                 } else {
                     productCard.style.display = 'none';
@@ -1210,36 +1288,46 @@ document.addEventListener('DOMContentLoaded', function () {
                     showToast('Please select a product and fill in all required fields.');
                     return;
                 }
+                setButtonLoading(submitBtn, true);
                 try {
                     // Validate product exists
                     const productCheckResponse = await clientAuthFetch(`${API_BASE_URL}/api/public/products/${selectedProductId}`);
                     if (!productCheckResponse.ok) {
                         throw new Error('Product not found. Cannot submit review for non-existent product.');
                     }
-                    // Check if updating existing review
-                    const reviewResponse = await clientAuthFetch(`${API_BASE_URL}/api/reviews?order_item_id=${productSelect.options[productSelect.selectedIndex].dataset.orderItemId}`);
-                    if (!reviewResponse.ok) {
-                        throw new Error('Failed to check existing review');
+                    // Check for existing review to determine if update or create
+                    let reviewData = { exists: false, review: null };
+                    try {
+                        const reviewResponse = await fetch(`${API_BASE_URL}/api/public/reviews?product_id=${selectedProductId}`);
+                        if (reviewResponse.ok) {
+                            const reviews = await reviewResponse.json();
+                            const existingReview = reviews.find(r => r.order_item_id == productSelect.options[productSelect.selectedIndex].dataset.orderItemId);
+                            reviewData = { exists: !!existingReview, review: existingReview };
+                        }
+                    } catch (error) {
+                        console.log('Could not check existing review');
                     }
-                    const reviews = await reviewResponse.json();
-                    const existingReview = reviews.find(r => r.order_item_id == productSelect.options[productSelect.selectedIndex].dataset.orderItemId);
-                    const reviewData = { exists: !!existingReview, review: existingReview };
                     const url = reviewData.exists ? `${API_BASE_URL}/api/reviews/${reviewData.review.review_id}` : `${API_BASE_URL}/api/reviews`;
                     const method = reviewData.exists ? 'PUT' : 'POST';
-                    const response = await clientAuthFetch(url, {
+                    const token = localStorage.getItem('userToken');
+                    if (!token) {
+                        throw new Error('Authentication required. Please log in again.');
+                    }
+                    
+                    const response = await fetch(url, {
                         method: method,
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
                         },
                         body: JSON.stringify({
                             star_rating,
                             review_text,
                             product_id: parseInt(selectedProductId),
-                            order_item_id: parseInt(productSelect.options[productSelect.selectedIndex].dataset.orderItemId),
+                            order_item_id: parseInt(productSelect.options[productSelect.selectedIndex].dataset.orderItemId) || null,
                             publish_status: 0,
                             customer_name: 'Customer Review'
-                        }),
-                        credentials: 'include'
+                        })
                     });
                     const data = await response.json();
                     if (response.ok) {
@@ -1251,6 +1339,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 } catch (error) {
                     console.error('Error submitting review:', error);
                     showToast(error.message || 'Error submitting review');
+                } finally {
+                    setButtonLoading(submitBtn, false);
                 }
             });
         } catch (error) {
@@ -1381,6 +1471,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 additionalComments: additionalComments
             };
             const submitBtn = this.querySelector('button[type="submit"]');
+            setButtonLoading(submitBtn, true);
             modal.remove();
             cancelOrder(orderId, cancellationData, submitBtn);
         });
@@ -1405,7 +1496,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <p style="margin: 15px 0;">We're sorry to hear that you'd like to return your order. To process your return request efficiently, please contact our customer support team.</p>
                                 <p style="margin: 15px 0;">Our team will guide you through the return process and provide you with all necessary instructions.</p>
                                 <p style="margin: 15px 0;"><a href="/shipping-returns.html" target="_blank" style="color: #dc3545; text-decoration: underline;">View our return policy</a></p>
-                                <button class="btn-primary" onclick="window.open('https://wa.me/918901551059?text=Hi, I would like to return my order. Order ID: ${orderId}, Tracking ID: ${trackingId}. Please assist me with the return process.', '_blank')" style="background-color: #25d366; border-color: #25d366;">Contact Support on WhatsApp</button>
+                                <button class="btn-primary contact-support-btn" onclick="setButtonLoading(this, true); window.open('https://wa.me/918901551059?text=Hi, I would like to return my order. Order ID: ${orderId}, Tracking ID: ${trackingId}. Please assist me with the return process.', '_blank'); setTimeout(() => setButtonLoading(this, false), 1000);" style="background-color: #25d366; border-color: #25d366;">Contact Support on WhatsApp</button>
                             </div>
                         </div>
                     `;
@@ -1416,6 +1507,49 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => console.error('Error fetching order details:', error));
     }
+    // Show Cancellation Reason Modal
+    function showCancellationReason(orderId) {
+        const modal = document.createElement('div');
+        modal.className = 'address-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Cancellation Details - Order #${orderId}</h2>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="loading-spinner" id="reason-loading">Loading...</div>
+                    <div id="reason-content" style="display: none;">
+                        <div class="form-group">
+                            <label>Cancellation Reason:</label>
+                            <div id="cancel-reason" class="form-control" style="background: #f5f5f5; padding: 1rem; border-radius: 8px;"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Additional Comments:</label>
+                            <div id="cancel-comments" class="form-control" style="background: #f5f5f5; padding: 1rem; border-radius: 8px; min-height: 80px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('.close-modal').onclick = () => modal.remove();
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+        
+        // Fetch cancellation details
+        clientAuthFetch(`${API_BASE_URL}/api/orders/${orderId}/cancellation`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('reason-loading').style.display = 'none';
+                document.getElementById('reason-content').style.display = 'block';
+                document.getElementById('cancel-reason').textContent = data.reason || 'N/A';
+                document.getElementById('cancel-comments').textContent = data.comments || 'N/A';
+            })
+            .catch(error => {
+                document.getElementById('reason-loading').innerHTML = 'Error loading cancellation details';
+            });
+    }
+
     // Show Add Address Modal
     function showAddAddressModal() {
         const modal = document.createElement('div');

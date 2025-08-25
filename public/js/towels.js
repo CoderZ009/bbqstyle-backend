@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
+  // Initialize slider
+  initializeTowelSlider();
+  
   // Fetch products filtered by "Women's Collection" and store in global variable
   axios.get(`${API_BASE_URL}/api/public/productshd/tw`)
     .then(response => {
@@ -10,3 +13,9 @@ document.addEventListener('DOMContentLoaded', function () {
       console.error('Error fetching products:', error);
     });
 });
+
+// Initialize towel slider functionality
+function initializeTowelSlider() {
+  // CSS animation handles the sliding, no JavaScript needed
+  console.log('Towel slider initialized with CSS animation');
+}

@@ -140,38 +140,24 @@ class CheckoutManager {
     }
     async loadCartItems() {
         try {
-            if (this.userId) {
-                const response = await clientAuthFetch(`${API_BASE_URL}/api/cart`);
-                const data = await response.json();
-                if (data.success) {
-                    this.cartItems = data.cart;
-                    this.orderSummary.subtotal = data.subtotal;
-                    this.orderSummary.total = data.subtotal;
-                    this.updateOrderSummary();
-                } else {
-                    alert('Failed to load cart items');
-                    window.location.href = '/cart.html';
-                }
-            } else {
-                // Load from localStorage for guest users
-                const localCart = JSON.parse(localStorage.getItem('cart') || '[]');
-                if (localCart.length === 0) {
-                    alert('Your cart is empty');
-                    window.location.href = '/cart.html';
-                    return;
-                }
-                // Transform localStorage cart format
-                this.cartItems = localCart.map(item => ({
-                    product_id: item.product_id,
-                    title: item.title,
-                    price: item.price,
-                    quantity: item.quantity,
-                    variant_detail: item.variant_detail
-                }));
-                this.orderSummary.subtotal = localCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                this.orderSummary.total = this.orderSummary.subtotal;
-                this.updateOrderSummary();
+            // Always load from localStorage
+            const localCart = JSON.parse(localStorage.getItem('cart') || '[]');
+            if (localCart.length === 0) {
+                alert('Your cart is empty');
+                window.location.href = '/cart.html';
+                return;
             }
+            // Transform localStorage cart format
+            this.cartItems = localCart.map(item => ({
+                product_id: item.product_id,
+                title: item.title,
+                price: item.price,
+                quantity: item.quantity,
+                variant_detail: item.variant_detail
+            }));
+            this.orderSummary.subtotal = localCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            this.orderSummary.total = this.orderSummary.subtotal;
+            this.updateOrderSummary();
         } catch (error) {
             console.error('Failed to load cart:', error);
             alert('Failed to load cart items');
@@ -819,11 +805,7 @@ class CheckoutManager {
                         });
                     }
                     alert('Order placed successfully!');
-                    if (this.isLoggedIn) {
-                        await clientAuthFetch(`${API_BASE_URL}/api/cart/clear`, { method: 'POST' });
-                    } else {
-                        localStorage.removeItem('cart');
-                    }
+                    localStorage.removeItem('cart');
                     window.location.href = '/order-success.html?orderId=' + data.orderId;
                 } else {
                     alert(data.message || 'Failed to place order');

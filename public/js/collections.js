@@ -14,11 +14,26 @@ document.addEventListener('DOMContentLoaded', () => {
     loadCategories(defaultTab);
 });
 // Function to fetch categories from API and render cards
-function loadCategories(tabName) {
+async function loadCategories(tabName) {
     const grid = document.querySelector(`#${tabName} #grid`);
     if (!grid) return;
-    // Clear existing content
-    grid.innerHTML = '';
+    
+    // Add spinner CSS if not exists
+    if (!document.getElementById('spinner-styles')) {
+        const style = document.createElement('style');
+        style.id = 'spinner-styles';
+        style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+        document.head.appendChild(style);
+    }
+    
+    // Show loading spinner
+    grid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+            <div style="display: inline-block; width: 32px; height: 32px; border: 4px solid #f3f4f6; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+            <p style="margin-top: 15px; color: #6b7280; font-size: 14px;">Loading categories...</p>
+        </div>
+    `;
+    
     // Map tabName to collectionName expected by API
     const collectionNameMap = {
         'women': "women's collection",
@@ -26,18 +41,28 @@ function loadCategories(tabName) {
         'hd': "home decor"
     };
     const collectionName = collectionNameMap[tabName] || tabName;
-    // Fetch categories from API
-    axios.get(`${API_BASE_URL}/api/public/categories/${encodeURIComponent(collectionName)}`)
-        .then(response => {
-            const categories = response.data;
-            categories.forEach(category => {
-                const card = createCategoryCard(category, tabName);
-                grid.appendChild(card);
-            });
-        })
-        .catch(error => {
-            console.error('Error fetching categories:', error);
-        });
+    
+    try {
+        // Fetch categories from API
+        const response = await axios.get(`${API_BASE_URL}/api/public/categories/${encodeURIComponent(collectionName)}`);
+        const categories = response.data;
+        
+        // Clear loading spinner
+        grid.innerHTML = '';
+        
+        // Load categories one by one
+        for (let i = 0; i < categories.length; i++) {
+            const category = categories[i];
+            const card = createCategoryCard(category, tabName);
+            grid.appendChild(card);
+            
+            // Small delay between cards
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        grid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #6b7280;">Error loading categories.</p>';
+    }
 }
 // Function to create a category card element
 function createCategoryCard(category, tabName) {
@@ -86,7 +111,7 @@ function createCategoryCard(category, tabName) {
     return a;
 }
 // Modified tab switching functionality to load categories dynamically
-function showTab(tabName) {
+async function showTab(tabName) {
     // Hide all tab contents and remove active class from buttons
     document.querySelectorAll('.tab-content, .tab-button').forEach(element => {
         element.classList.remove('active');
@@ -96,5 +121,5 @@ function showTab(tabName) {
     // Mark clicked button as active
     event.target.classList.add('active');
     // Load categories for selected tab
-    loadCategories(tabName);
+    await loadCategories(tabName);
 }

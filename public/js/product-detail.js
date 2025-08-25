@@ -21,22 +21,10 @@ function getQueryParam(param) {
 // Function to fetch product data by product_id from API
 async function fetchProductData(productId) {
     try {
-        const productResponse = await fetch(`${API_BASE_URL}/api/public/products/${productId}`);
-        if (!productResponse.ok) {
-            const errorText = await productResponse.text();
-            console.error('Product API response error text:', errorText);
-            throw new Error('Product not found');
-        }
-        const product = await productResponse.json();
-        const reviewsResponse = await fetch(`${API_BASE_URL}/api/public/reviews?product_id=${productId}`);
-        if (reviewsResponse.ok) {
-            product.reviews = await reviewsResponse.json();
-        } else {
-            product.reviews = [];
-        }
+        const product = await fetch(`${API_BASE_URL}/api/public/products/${productId}`).then(r => r.json());
+        product.reviews = await fetch(`${API_BASE_URL}/api/public/reviews?product_id=${productId}`).then(r => r.ok ? r.json() : []).catch(() => []);
         return product;
     } catch (error) {
-        console.error('Error fetching product data:', error);
         return null;
     }
 };
@@ -310,9 +298,7 @@ async function loadReviews(productId, productName) {
     const reviewFiltersContainer = document.getElementById('review-filters');
     if (!reviewsListContainer || !reviewSummaryContainer || !reviewFiltersContainer) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/api/public/reviews?product_id=${productId}`);
-        if (!res.ok) throw new Error('Failed to load reviews');
-        const reviews = await res.json();
+        const reviews = await fetch(`${API_BASE_URL}/api/public/reviews?product_id=${productId}`).then(r => r.json()).catch(() => []);
         // Calculate average rating and star counts
         const totalReviews = reviews.length;
         const avgRating = totalReviews > 0 ? (reviews.reduce((sum, r) => sum + r.star_rating, 0) / totalReviews).toFixed(1) : 0;
@@ -612,42 +598,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     const product = await fetchProductData(productId);
     populateProductDetail(product);
-    // Event listener for review form submission
-    const reviewForm = document.getElementById('review-form');
-    const reviewFormContainer = document.getElementById('review-form-container');
-    const cancelReviewBtn = document.getElementById('cancel-review-btn');
-    const reviewProductIdInput = document.getElementById('review-product-id');
-    // Attach event listener to a static parent for the write review button
-    const reviewsSection = document.querySelector('.border-t.border-gray-200.p-6');
-    if (reviewsSection) {
-        reviewsSection.addEventListener('click', (e) => {
-            if (e.target && e.target.id === 'write-review-btn') {
-                showToast('Please log in to write a review.');
-                setTimeout(() => window.location.href = '/account.html', 1000);
-            }
-        });
-    }
-    if (reviewForm) {
-        reviewForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const customer_name = document.getElementById('review-customer-name').value.trim();
-            const star_rating = parseInt(document.getElementById('review-stars').value);
-            const review_text = document.getElementById('review-text').value.trim();
-            const product_id = reviewProductIdInput.value;
-            if (!customer_name || !star_rating || !review_text || !product_id) {
-                showToast('Please fill in all required fields.');
-                return;
-            }
-            showToast('Please log in to submit a review.');
-            setTimeout(() => window.location.href = '/account.html', 1000);
-        });
-    }
-    // Event listener for cancel review button
-    if (cancelReviewBtn) {
-        cancelReviewBtn.addEventListener('click', () => {
-            reviewFormContainer.classList.add('hidden');
-        });
-    }
+
     // Add to cart functionality and set product data
     const addToCartBtn = document.getElementById('add-to-cart-btn');
     if (addToCartBtn && product) {
@@ -678,6 +629,20 @@ function handleAddToCart(product) {
     // Always handle cart using localStorage
     return handleLocalStorageCart(product);
 }
+
+async function handleAddToCart(product) {
+    try {
+        // Check if user is logged in
+        const authResponse = await fetch('/api/check-auth', {
+            credentials: 'include'
+        });
+        
+        const isLoggedIn = authResponse.ok && (await authResponse.json()).loggedIn;
+        
+        if (!isLoggedIn) {
+            // Handle cart for non-logged in users using localStorage
+            return handleLocalStorageCart(product);
+        }
         // Get selected variants
         const selectedColorElement = document.querySelector('.color-option.bg-gray-200');
         const selectedSizeElement = document.getElementById('size-selector');
@@ -711,44 +676,7 @@ function handleAddToCart(product) {
         const quantity = quantityElement ? parseInt(quantityElement.textContent) : 1;
         const button = document.getElementById('add-to-cart-btn');
         const currentlyInCart = await checkProductInCart(product.product_id, selectedVariant);
-        if (currentlyInCart) {
-            // Remove from cart
-            const removeResponse = await clientAuthFetch(`${API_BASE_URL}/api/cart/remove`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    productId: product.product_id,
-                    variantDetail: selectedVariant
-                })
-            });
-            if (removeResponse.ok) {
-                updateAddToCartButton(button, false);
-                showToast('Removed from cart!');
-            } else {
-                throw new Error('Failed to remove from cart');
-            }
-        } else {
-            // Add to cart
-            const response = await clientAuthFetch(`${API_BASE_URL}/api/cart/add`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    productId: product.product_id,
-                    variantDetail: selectedVariant,
-                    quantity: quantity
-                })
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Failed to add to cart');
-            }
-            updateAddToCartButton(button, true);
-            showToast('Added to cart!', { url: 'cart.html', text: 'View Cart' });
-        }
+
     } catch (error) {
         console.error('Error handling cart action:', error);
         showToast(error.message || 'Failed to update cart. Please try again.');

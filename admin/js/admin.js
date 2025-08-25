@@ -1865,6 +1865,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
                 <button class="edit-tracking" data-order-id="${orderId}" data-tracking-id="${order.tracking_id || ''}" data-tracking-link="${order.tracking_link || ''}" data-carrier="${order.carrier || ''}">Edit Tracking</button>
             `;
+        } else if (status === 'cancelled') {
+            return `
+                <button class="view-reason" data-order-id="${orderId}">View Reason</button>
+            `;
         }
         return '';
     }
@@ -1885,6 +1889,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         document.querySelectorAll('.update-status').forEach(btn => {
             btn.addEventListener('click', () => updateTrackingStatus(btn.dataset.orderId));
+        });
+        document.querySelectorAll('.view-reason').forEach(btn => {
+            btn.addEventListener('click', () => showCancellationReason(btn.dataset.orderId));
         });
     }
 
@@ -2164,6 +2171,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+
+    // Show cancellation reason modal
+    async function showCancellationReason(orderId) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Cancellation Details - Order #${orderId}</h2>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div id="reason-loading" class="text-center py-4">Loading...</div>
+                    <div id="reason-content" style="display: none;">
+                        <div class="form-group">
+                            <label>Cancellation Reason:</label>
+                            <div id="cancel-reason" class="form-control" style="background: #f5f5f5; padding: 1rem; border-radius: 8px;"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Additional Comments:</label>
+                            <div id="cancel-comments" class="form-control" style="background: #f5f5f5; padding: 1rem; border-radius: 8px; min-height: 80px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('.close-modal').onclick = () => modal.remove();
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+        
+        try {
+            const response = await clientAuthFetch(`${API_BASE_URL}/api/admin/orders/${orderId}/cancellation`);
+            const data = await response.json();
+            
+            document.getElementById('reason-loading').style.display = 'none';
+            document.getElementById('reason-content').style.display = 'block';
+            document.getElementById('cancel-reason').textContent = data.reason || 'N/A';
+            document.getElementById('cancel-comments').textContent = data.comments || 'N/A';
+        } catch (error) {
+            document.getElementById('reason-loading').innerHTML = 'Error loading cancellation details';
+        }
+    }
 
     // Make sure to call addOrderActionListeners after rendering orders
     window.getOrderActionButtons = getOrderActionButtons;

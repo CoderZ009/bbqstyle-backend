@@ -7,10 +7,17 @@ function getClientAuthHeaders() {
 }
 // Helper function to make authenticated requests for client
 function clientAuthFetch(url, options = {}) {
+    const token = localStorage.getItem('userToken');
+    if (!token) {
+        return Promise.reject(new Error('No authentication token'));
+    }
+    
     const headers = {
-        ...getClientAuthHeaders(),
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
         ...options.headers
     };
+    
     return fetch(url, {
         ...options,
         headers

@@ -2827,6 +2827,100 @@ app.get('/api/orders/:orderId/items', authenticateToken, (req, res) => {
     });
 });
 
+// Get invoice template
+app.get('/api/admin/invoice-template', isAuthenticated, (req, res) => {
+    const query = 'SELECT * FROM invoice_template ORDER BY id DESC LIMIT 1';
+    
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ success: false, error: 'Database error' });
+        }
+        
+        if (results.length === 0) {
+            return res.json({ 
+                success: true, 
+                template: {
+                    company_name: '',
+                    company_address: '',
+                    company_gstin: '',
+                    company_email: '',
+                    company_phone: '',
+                    invoice_prefix: 'INV-',
+                    invoice_footer: 'Thank you for your business!',
+                    invoice_terms: ''
+                }
+            });
+        }
+        
+        res.json({ success: true, template: results[0] });
+    });
+});
+
+// Save invoice template
+app.put('/api/admin/invoice-template', isAuthenticated, (req, res) => {
+    const {
+        company_name,
+        company_address,
+        company_gstin,
+        company_email,
+        company_phone,
+        invoice_prefix,
+        invoice_footer,
+        invoice_terms
+    } = req.body;
+    
+    // Check if template exists
+    const checkQuery = 'SELECT id FROM invoice_template LIMIT 1';
+    
+    db.query(checkQuery, (err, results) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ success: false, error: 'Database error' });
+        }
+        
+        if (results.length === 0) {
+            // Insert new template
+            const insertQuery = `
+                INSERT INTO invoice_template 
+                (company_name, company_address, company_gstin, company_email, company_phone, invoice_prefix, invoice_footer, invoice_terms)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            
+            db.query(insertQuery, [
+                company_name, company_address, company_gstin, company_email, 
+                company_phone, invoice_prefix, invoice_footer, invoice_terms
+            ], (insertErr) => {
+                if (insertErr) {
+                    console.error('Database error:', insertErr);
+                    return res.status(500).json({ success: false, error: 'Database error' });
+                }
+                res.json({ success: true, message: 'Template created successfully' });
+            });
+        } else {
+            // Update existing template
+            const updateQuery = `
+                UPDATE invoice_template 
+                SET company_name = ?, company_address = ?, company_gstin = ?, company_email = ?, 
+                    company_phone = ?, invoice_prefix = ?, invoice_footer = ?, invoice_terms = ?
+                WHERE id = ?
+            `;
+            
+            db.query(updateQuery, [
+                company_name, company_address, company_gstin, company_email,
+                company_phone, invoice_prefix, invoice_footer, invoice_terms,
+                results[0].id
+            ], (updateErr) => {
+                if (updateErr) {
+                    console.error('Database error:', updateErr);
+                    return res.status(500).json({ success: false, error: 'Database error' });
+                }
+                res.json({ success: true, message: 'Template updated successfully' });
+            });
+        }
+    });
+});
+
 // Get addresses for user
 app.get('/api/addresses', authenticateToken, (req, res) => {
     const userId = req.userId;

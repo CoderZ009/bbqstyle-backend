@@ -26,33 +26,57 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // Bluehost SMTP Configuration
 const smtpTransporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'mail.bbqstyle.in',
-    port: process.env.SMTP_PORT || 587,
-    secure: false, // true for 465, false for other ports
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: false,
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
     },
     tls: {
         rejectUnauthorized: false
+    },
+    debug: true,
+    logger: true
+});
+
+// Test SMTP connection on startup
+smtpTransporter.verify((error, success) => {
+    if (error) {
+        console.error('SMTP connection failed:', error);
+    } else {
+        console.log('SMTP server is ready to send emails');
     }
 });
 
 // Email sending function
 async function sendEmail(to, subject, html, text = null) {
+    console.log('Attempting to send email:', { to, subject, from: process.env.SMTP_USER });
+    
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        console.error('SMTP credentials not configured');
+        return { success: false, error: 'SMTP credentials not configured' };
+    }
+    
     try {
         const mailOptions = {
             from: `"BBQ Style" <${process.env.SMTP_USER}>`,
             to: to,
             subject: subject,
             html: html,
-            text: text || html.replace(/<[^>]*>/g, '') // Strip HTML for text version
+            text: text || html.replace(/<[^>]*>/g, '')
         };
 
+        console.log('Mail options:', mailOptions);
         const info = await smtpTransporter.sendMail(mailOptions);
-        console.log('Email sent successfully:', info.messageId);
+        console.log('Email sent successfully:', info.messageId, info.response);
         return { success: true, messageId: info.messageId };
     } catch (error) {
-        console.error('Email sending failed:', error);
+        console.error('Email sending failed:', {
+            error: error.message,
+            code: error.code,
+            command: error.command,
+            response: error.response
+        });
         return { success: false, error: error.message };
     }
 }
@@ -68,6 +92,23 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
+});
+
+// Simple email test endpoint (no auth for debugging)
+app.post('/api/test-email', async (req, res) => {
+    const { to = 'hardevi143@gmail.com' } = req.body;
+    
+    try {
+        const result = await sendEmail(
+            to,
+            'Test Email - BBQ Style',
+            '<h1>Test Email</h1><p>If you receive this, SMTP is working!</p>'
+        );
+        
+        res.json({ success: result.success, message: result.success ? 'Email sent' : result.error });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 // SMTP test endpoint (admin only)

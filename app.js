@@ -2847,6 +2847,7 @@ app.get('/api/admin/invoice-template', isAuthenticated, (req, res) => {
                     company_email: '',
                     company_phone: '',
                     invoice_prefix: 'INV-',
+                    invoice_theme: 'classic',
                     invoice_footer: 'Thank you for your business!',
                     invoice_terms: ''
                 }
@@ -2866,6 +2867,7 @@ app.put('/api/admin/invoice-template', isAuthenticated, (req, res) => {
         company_email,
         company_phone,
         invoice_prefix,
+        invoice_theme,
         invoice_footer,
         invoice_terms
     } = req.body;
@@ -2883,13 +2885,13 @@ app.put('/api/admin/invoice-template', isAuthenticated, (req, res) => {
             // Insert new template
             const insertQuery = `
                 INSERT INTO invoice_template 
-                (company_name, company_address, company_gstin, company_email, company_phone, invoice_prefix, invoice_footer, invoice_terms)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (company_name, company_address, company_gstin, company_email, company_phone, invoice_prefix, invoice_theme, invoice_footer, invoice_terms)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
             
             db.query(insertQuery, [
                 company_name, company_address, company_gstin, company_email, 
-                company_phone, invoice_prefix, invoice_footer, invoice_terms
+                company_phone, invoice_prefix, invoice_theme, invoice_footer, invoice_terms
             ], (insertErr) => {
                 if (insertErr) {
                     console.error('Database error:', insertErr);
@@ -2902,13 +2904,13 @@ app.put('/api/admin/invoice-template', isAuthenticated, (req, res) => {
             const updateQuery = `
                 UPDATE invoice_template 
                 SET company_name = ?, company_address = ?, company_gstin = ?, company_email = ?, 
-                    company_phone = ?, invoice_prefix = ?, invoice_footer = ?, invoice_terms = ?
+                    company_phone = ?, invoice_prefix = ?, invoice_theme = ?, invoice_footer = ?, invoice_terms = ?
                 WHERE id = ?
             `;
             
             db.query(updateQuery, [
                 company_name, company_address, company_gstin, company_email,
-                company_phone, invoice_prefix, invoice_footer, invoice_terms,
+                company_phone, invoice_prefix, invoice_theme, invoice_footer, invoice_terms,
                 results[0].id
             ], (updateErr) => {
                 if (updateErr) {

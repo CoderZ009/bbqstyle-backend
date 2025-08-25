@@ -1909,49 +1909,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function cancelOrder(orderId) {
         const modal = document.createElement('div');
-        modal.className = 'modal';
+        modal.id = 'cancel-order-form-container';
         modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Cancel Order #${orderId}</h2>
-                    <span class="close-modal">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <form id="cancel-order-form">
-                        <div class="form-group">
-                            <label>Cancellation Reason:</label>
-                            <select id="cancel-reason" required>
-                                <option value="">Select reason</option>
-                                <option value="Out of stock">Out of stock</option>
-                                <option value="Customer request">Customer request</option>
-                                <option value="Payment issue">Payment issue</option>
-                                <option value="Address issue">Address issue</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Additional Comments:</label>
-                            <textarea id="cancel-comments" rows="3" placeholder="Optional additional comments"></textarea>
-                        </div>
-                        <button type="submit" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Cancel Order</button>
-                    </form>
-                </div>
-            </div>
+            <form id="cancel-order-form">
+                <h3 id="cancel-order-form-title">Cancel Order #${orderId}</h3>
+                <label>Cancellation Reason:</label>
+                <select id="cancel-reason" required>
+                    <option value="">Select reason</option>
+                    <option value="Out of stock">Out of stock</option>
+                    <option value="Customer request">Customer request</option>
+                    <option value="Payment issue">Payment issue</option>
+                    <option value="Address issue">Address issue</option>
+                    <option value="Other">Other</option>
+                </select>
+                <label>Additional Comments (Optional):</label>
+                <textarea id="cancel-comments" rows="3" placeholder="Optional additional comments" style="resize: vertical;"></textarea>
+                <button type="submit">Cancel Order</button>
+                <button type="button" onclick="this.closest('#cancel-order-form-container').remove()">Close</button>
+            </form>
         `;
         document.body.appendChild(modal);
-        modal.querySelector('.close-modal').onclick = () => modal.remove();
-        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+        
+        // Add event listeners after modal is added to DOM
+        const closeBtn = modal.querySelector('button[type="button"]');
+        if (closeBtn) {
+            closeBtn.onclick = () => modal.remove();
+        }
         
         modal.querySelector('#cancel-order-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const reason = document.getElementById('cancel-reason').value;
-            const comments = document.getElementById('cancel-comments').value;
+            const comments = document.getElementById('cancel-comments').value.trim();
+            
+            const payload = { reason };
+            if (comments) {
+                payload.additionalComments = comments;
+            }
             
             try {
                 const response = await clientAuthFetch(`${API_BASE_URL}/api/admin/orders/${orderId}/cancel`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ reason, additionalComments: comments })
+                    body: JSON.stringify(payload)
                 });
                 const data = await response.json();
                 if (data.success) {

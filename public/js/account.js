@@ -686,7 +686,8 @@ document.addEventListener('DOMContentLoaded', function () {
                                 ${(order.status !== 'pending' && order.status !== 'processing' && order.status !== 'cancelled') ? `<button class="btn-track" data-order-id="${order.order_id}" data-tracking-link="${order.tracking_link || ''}">Track Order</button>` : ''}
                                 <button class="btn-details view-order-details" data-order-id="${order.order_id}">View Details</button>
                                 ${(order.status === 'pending' || order.status === 'processing') ? `<button class="btn-cancel" data-order-id="${order.order_id}">Cancel Order</button>` : ''}
-                                ${order.status === 'cancelled' ? `<button class="btn-view-reason" data-order-id="${order.order_id}" style="background: #dc3545; color: white; border: 1px solid #dc3545; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;">View Reason</button>` : ''}
+                                ${order.status === 'cancelled' ? `<button class="btn-view-reason" data-order-id="${order.order_id}" style="background: #dc3545; color: white; border: 1px solid #dc3545; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; margin: 5px;">View Reason</button>` : ''}
+                                ${console.log('Order status:', order.status, 'Order ID:', order.order_id) || ''}
                                 ${order.status === 'delivered' ? `<button class="btn-review" data-order-id="${order.order_id}">Write Review</button>` : ''}
                                 ${order.status === 'delivered' ? `<button class="btn-return" data-order-id="${order.order_id}" style="background-color: #dc3545; border-color: #dc3545;">Return Order</button>` : ''}
                                 ${(order.status === 'delivered' || order.status === 'cancelled') ? `<button class="btn-reorder" data-order-id="${order.order_id}">Reorder</button>` : ''}

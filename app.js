@@ -2791,6 +2791,42 @@ app.get('/api/admin/orders/:orderId/items', isAuthenticated, (req, res) => {
     });
 });
 
+// Get order items for users
+app.get('/api/orders/:orderId/items', authenticateToken, (req, res) => {
+    const orderId = req.params.orderId;
+    const userId = req.userId;
+
+    // First verify the order belongs to the user
+    const orderQuery = 'SELECT * FROM orders WHERE order_id = ? AND user_id = ?';
+    db.query(orderQuery, [orderId, userId], (err, orderResults) => {
+        if (err) {
+            console.error('Database error checking order:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        if (orderResults.length === 0) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Get order items
+        const itemsQuery = `
+            SELECT oi.*, p.title, pi.image_path
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.product_id
+            LEFT JOIN product_images pi ON p.product_id = pi.product_id
+            WHERE oi.order_id = ?
+            GROUP BY oi.order_item_id
+        `;
+
+        db.query(itemsQuery, [orderId], (itemsErr, itemsResults) => {
+            if (itemsErr) {
+                console.error('Database error fetching order items:', itemsErr);
+                return res.status(500).json({ error: 'Database error' });
+            }
+            res.json(itemsResults);
+        });
+    });
+});
+
 // Get addresses for user
 app.get('/api/addresses', authenticateToken, (req, res) => {
     const userId = req.userId;

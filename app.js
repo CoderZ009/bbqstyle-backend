@@ -1674,73 +1674,6 @@ app.post('/api/payment-webhook', async (req, res) => {
                     });
                 });
 
-                // Send payment confirmation email to customer
-                try {
-                    const userQuery = 'SELECT first_name, last_name, email FROM users WHERE user_id = ?';
-                    const userResult = await new Promise((resolve, reject) => {
-                        db.query(userQuery, [tempOrder.user_id], (err, results) => {
-                            if (err) reject(err);
-                            else resolve(results[0]);
-                        });
-                    });
-
-                    if (userResult && userResult.email) {
-                        const paymentEmailHtml = `
-                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                <h2 style="color: #28a745;">Payment Successful - BBQSTYLE</h2>
-                                <p>Dear ${userResult?.first_name || 'Customer'} ${userResult?.last_name || ''},</p>
-                                <p>Your payment has been successfully processed!</p>
-                                <div style="background: #d4edda; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #28a745;">
-                                    <h3 style="margin: 0 0 10px 0; color: #155724;">Payment Details:</h3>
-                                    <p><strong>Order ID:</strong> #${actualOrderId}</p>
-                                    <p><strong>Amount Paid:</strong> ₹${tempOrder.total_amount}</p>
-                                    <p><strong>Payment Status:</strong> Successful</p>
-                                </div>
-                                <p>Your order is now being processed and you will receive shipping updates soon.</p>
-                                <p>Thank you for choosing BBQSTYLE!</p>
-                                <hr style="margin: 30px 0;">
-                                <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
-                            </div>
-                        `;
-
-                        await sendEmail(
-                            userResult.email,
-                            `Payment Successful - Order #${actualOrderId}`,
-                            paymentEmailHtml
-                        );
-
-                        // Send order received notification to admin
-                        const adminEmailHtml = `
-                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                <div style="text-align: center; padding: 20px; background: #c3a4c6;">
-                                    <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
-                                </div>
-                                <div style="padding: 30px;">
-                                <h2 style="color: #007bff;">New Order Received - BBQSTYLE</h2>
-                                <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
-                                    <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
-                                    <p><strong>Order ID:</strong> #${actualOrderId}</p>
-                                    <p><strong>Customer:</strong> ${userResult?.first_name || 'N/A'} ${userResult?.last_name || ''}</p>
-                                    <p><strong>Email:</strong> ${userResult?.email || 'N/A'}</p>
-                                    <p><strong>Total Amount:</strong> ₹${tempOrder.total_amount}</p>
-                                    <p><strong>Payment Mode:</strong> Online</p>
-                                    <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
-                                </div>
-                                <p>Please process this order in the admin panel.</p>
-                                </div>
-                            </div>
-                        `;
-
-                        await sendEmail(
-                            'hardevi143@gmail.com',
-                            `New Order Received - #${actualOrderId}`,
-                            adminEmailHtml
-                        );
-                    }
-                } catch (emailError) {
-                    console.error('Error sending payment confirmation email:', emailError);
-                }
-
                 await new Promise((resolve, reject) => {
                     db.query('DELETE FROM temp_orders WHERE id = ?', [order_id], (err) => {
                         if (err) reject(err);
@@ -2038,34 +1971,63 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
             `).join('');
 
             const adminEmailHtml = `
-                <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-                    <h2 style="color: #007bff;">New Order Received - BBQSTYLE</h2>
-                    <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
-                        <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
-                        <p><strong>Order ID:</strong> #${orderId}</p>
-                        <p><strong>Customer:</strong> ${userResult?.first_name || 'N/A'} ${userResult?.last_name || ''}</p>
-                        <p><strong>Email:</strong> ${userResult?.email || 'N/A'}</p>
-                        <p><strong>Total Amount:</strong> ₹${totalAmount}</p>
-                        <p><strong>Payment Mode:</strong> ${paymentMode}</p>
-                        <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
+                <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; padding: 20px; background: #c3a4c6;">
+                        <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
-                    <h3>Order Items:</h3>
-                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                        <thead>
-                            <tr style="background: #f8f9fa;">
-                                <th style="padding: 10px; border: 1px solid #ddd;">Image</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Product</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Variant</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Qty</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Price</th>
-                                <th style="padding: 10px; border: 1px solid #ddd;">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsHtml}
-                        </tbody>
-                    </table>
-                    <p>Please process this order in the admin panel.</p>
+                    <div style="padding: 30px;">
+                        <h2 style="color: #007bff; margin-bottom: 20px;">🎉 New Order Received!</h2>
+                        <p style="color: #495057; font-size: 16px; margin-bottom: 25px;">A new order has been placed and requires your attention.</p>
+                        <div style="background: #e7f3ff; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #007bff;">
+                            <h3 style="margin: 0 0 15px 0; color: #004085;">📋 Order Summary</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <p><strong>Order ID:</strong> #${orderId}</p>
+                                <p><strong>Total Amount:</strong> ₹${totalAmount}</p>
+                                <p><strong>Payment Mode:</strong> ${paymentMode}</p>
+                                <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
+                            </div>
+                        </div>
+
+                        <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #28a745;">
+                            <h3 style="margin: 0 0 15px 0; color: #155724;">👤 Customer Information</h3>
+                            <p><strong>Name:</strong> ${userResult?.first_name || 'N/A'} ${userResult?.last_name || ''}</p>
+                            <p><strong>Email:</strong> ${userResult?.email || 'N/A'}</p>
+                        </div>
+
+                        <div style="background: #fff3cd; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #ffc107;">
+                            <h3 style="margin: 0 0 10px 0; color: #856404;">📦 Order Items</h3>
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <thead>
+                                <tr style="background: #007bff; color: white;">
+                                    <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Image</th>
+                                    <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Product</th>
+                                    <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">Variant</th>
+                                    <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">Qty</th>
+                                    <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">Price</th>
+                                    <th style="padding: 12px; border: 1px solid #ddd; text-align: right;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsHtml}
+                            </tbody>
+                        </table>
+
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="https://admin.bbqstyle.in" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600; box-shadow: 0 2px 4px rgba(0,123,255,0.3);">🔧 Process Order in Admin Panel</a>
+                        </div>
+                        
+                        <div style="background: #d1ecf1; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                            <p style="margin: 0; color: #0c5460;"><strong>⚡ Action Required:</strong> Please review and process this order promptly to ensure customer satisfaction.</p>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 10px 0; font-weight: 600; color: #495057;">BBQSTYLE Admin Panel</p>
+                        <p style="margin: 5px 0; color: #6c757d;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                        <p style="margin: 5px 0; color: #6c757d;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                        <p style="margin: 15px 0 0 0; color: #6c757d; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    </div>
                 </div>
             `;
 
@@ -4197,21 +4159,35 @@ app.put('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
         if (orderResult.email) {
             console.log('Sending customer cancellation email to:', orderResult.email);
             const cancelEmailHtml = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
-                    <h2 style="color: #dc3545;">Order Cancelled - BBQSTYLE</h2>
-                    <p>Dear ${orderResult?.first_name || 'Customer'} ${orderResult?.last_name || ''},</p>
-                    <p>Your order has been successfully cancelled as requested.</p>
-                    <div style="background: #f8d7da; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;">
-                        <h3 style="margin: 0 0 10px 0;">Cancelled Order Details:</h3>
-                        <p><strong>Order ID:</strong> #${orderId}</p>
-                        <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
-                        <p><strong>Cancelled By:</strong> You</p>
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; padding: 20px; background: #c3a4c6;">
+                        <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
-                    <p>If you paid online, your refund will be processed within 5-7 business days.</p>
-                    <p>Thank you for choosing BBQSTYLE!</p>
-                    <hr style="margin: 30px 0;">
-                    <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    <div style="padding: 30px;">
+                        <h2 style="color: #dc3545; margin-bottom: 20px;">Order Cancelled 🚫</h2>
+                        <p>Dear ${orderResult?.first_name || 'Customer'} ${orderResult?.last_name || ''},</p>
+                        <p>Your order has been successfully cancelled as requested.</p>
+                        <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #dc3545;">
+                            <h3 style="margin: 0 0 15px 0; color: #721c24;">Cancelled Order Details:</h3>
+                            <p><strong>Order ID:</strong> #${orderId}</p>
+                            <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
+                            <p><strong>Cancelled By:</strong> You</p>
+                            <p><strong>Cancellation Date:</strong> ${new Date().toLocaleString()}</p>
+                        </div>
+                        <div style="background: #d1ecf1; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                            <p style="margin: 0; color: #0c5460;"><strong>💰 Refund Information:</strong> If you paid online, your refund will be processed within 5-7 business days.</p>
+                        </div>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="https://bbqstyle.in" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🛒 Continue Shopping</a>
+                        </div>
+                        <p>Thank you for choosing BBQSTYLE!</p>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                        <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                        <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                        <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    </div>
                 </div>
             `;
 

@@ -198,6 +198,7 @@ async function sendStatusUpdateEmail(orderId, newStatus, oldStatus) {
             'processing': { title: 'Order Confirmed', message: 'Your order has been confirmed and is being prepared for packing.', color: '#28a745' },
             'ready': { title: 'Order Packed', message: 'Your order has been packed and is ready for shipment.', color: '#17a2b8' },
             'shipped': { title: 'Order Shipped', message: 'Your order is on its way to you!', color: '#6f42c1' },
+            'out_for_delivery': { title: 'Out for Delivery', message: 'Your order is out for delivery and will reach you soon!', color: '#ff9500' },
             'delivered': { title: 'Order Delivered', message: 'Your order has been delivered successfully!', color: '#28a745' },
             'cancelled': { title: 'Order Cancelled', message: 'Your order has been cancelled.', color: '#dc3545' },
             'out_of_stock': { title: 'Order On Hold', message: 'Some items in your order are currently out of stock. We will notify you once they are available.', color: '#ffc107' }
@@ -3673,6 +3674,75 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
         res.json({ success: true, message: 'Order marked as shipped and email sent' });
     } catch (error) {
         console.error('Error updating to shipped:', error);
+        res.status(500).json({ error: 'Failed to update order status' });
+    }
+});
+
+// Update to Out for Delivery
+app.put('/api/admin/orders/:orderId/out-for-delivery', isAuthenticated, async (req, res) => {
+    const orderId = req.params.orderId;
+    
+    try {
+        console.log(`Updating order ${orderId} to out for delivery`);
+        
+        const orderResult = await new Promise((resolve, reject) => {
+            const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
+            db.query(query, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        
+        if (!orderResult) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE orders SET status = "out_for_delivery" WHERE order_id = ?', [orderId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        
+        if (orderResult && orderResult.email) {
+            const emailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                    </div>
+                    <div style="padding: 30px;">
+                        <h2 style="color: #ff9500; margin-bottom: 20px;">Out for Delivery! 🚛</h2>
+                        <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                        <p>Great news! Your order is out for delivery and will reach you soon!</p>
+                        <div style="background: #fff3cd; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #ff9500;">
+                            <h3 style="margin: 0 0 15px 0; color: #856404;">Delivery Details:</h3>
+                            <p><strong>Order ID:</strong> #${orderId}</p>
+                            <p><strong>Status:</strong> OUT FOR DELIVERY</p>
+                            <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
+                            <p><strong>Expected Delivery:</strong> Today</p>
+                        </div>
+                        <div style="background: #e7f3ff; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #007bff;">
+                            <p style="margin: 0; color: #004085;"><strong>📞 Delivery Instructions:</strong></p>
+                            <p style="margin: 5px 0 0 0; color: #004085;">Please keep your phone accessible. Our delivery partner will call you before delivery.</p>
+                        </div>
+                        <p>Please be available to receive your order. Thank you for choosing BBQSTYLE!</p>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                        <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                        <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                        <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    </div>
+                </div>
+            `;
+            
+            const emailResult = await sendEmail(orderResult.email, `Out for Delivery - #${orderId}`, emailHtml);
+            console.log('Out for delivery email result:', emailResult);
+        }
+        
+        res.json({ success: true, message: 'Order marked as out for delivery and email sent' });
+    } catch (error) {
+        console.error('Error updating to out for delivery:', error);
         res.status(500).json({ error: 'Failed to update order status' });
     }
 });

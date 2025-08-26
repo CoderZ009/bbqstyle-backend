@@ -96,7 +96,12 @@ app.get('/health', (req, res) => {
 
 // Simple email test endpoint (no auth for debugging)
 app.post('/api/test-email', async (req, res) => {
-    const { to = 'hardevi143@gmail.com' } = req.body;
+    console.log('Test email request body:', req.body);
+    
+    let to = 'hardevi143@gmail.com';
+    if (req.body && req.body.to) {
+        to = req.body.to;
+    }
     
     try {
         const result = await sendEmail(

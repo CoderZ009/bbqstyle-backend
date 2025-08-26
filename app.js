@@ -340,7 +340,7 @@ db.getConnection((err, connection) => {
 
 // Middleware
 app.use(cors({
-    origin: '*',
+    origin: ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -348,7 +348,7 @@ app.use(cors({
 
 // Handle preflight requests
 app.options('*', cors({
-    origin: '*',
+    origin: ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -356,7 +356,11 @@ app.options('*', cors({
 
 // Additional CORS middleware for admin routes
 app.use('/api/*', (req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    const allowedOrigins = ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000'];
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
@@ -703,6 +707,42 @@ app.post('/api/register', (req, res) => {
         }
     });
 });
+// Update email only endpoint
+app.post('/api/update-email', authenticateToken, (req, res) => {
+    const userId = req.userId;
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    // Check if email is already used by another user
+    db.query('SELECT user_id FROM users WHERE email = ? AND user_id != ?', [email, userId], (err, results) => {
+        if (err) {
+            console.error('Database error during email check:', err);
+            return res.status(500).json({ success: false, message: 'Database error' });
+        }
+        
+        if (results.length > 0) {
+            return res.status(409).json({ success: false, message: 'Email is already in use by another account' });
+        }
+
+        // Update user email
+        db.query('UPDATE users SET email = ? WHERE user_id = ?', [email, userId], (updateErr, result) => {
+            if (updateErr) {
+                console.error('Database error during email update:', updateErr);
+                return res.status(500).json({ success: false, message: 'Database error' });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+
+            res.json({ success: true, message: 'Email updated successfully' });
+        });
+    });
+});
+
 // Update user profile endpoint
 app.put('/api/update-profile', authenticateToken, (req, res) => {
     const userId = req.userId;

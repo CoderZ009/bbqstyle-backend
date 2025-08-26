@@ -1920,20 +1920,24 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
                 `).join('');
 
                 const orderEmailHtml = `
-                    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
-                        <h2 style="color: #333;">Order Confirmation - BBQSTYLE</h2>
-                        <p>Dear ${userResult?.first_name || 'Customer'} ${userResult?.last_name || ''},</p>
-                        <p>Thank you for your order! Your order has been successfully placed.</p>
-                        
-                        <div style="background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;">
-                            <h3 style="margin: 0 0 10px 0;">Order Summary:</h3>
-                            <p><strong>Order ID:</strong> #${orderId}</p>
-                            <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
-                            <p><strong>Payment Mode:</strong> ${paymentMode}</p>
-                            <p><strong>Subtotal:</strong> ₹${subtotal}</p>
-                            ${discount > 0 ? `<p><strong>Discount:</strong> -₹${discount}</p>` : ''}
-                            <p><strong>Total Amount:</strong> ₹${totalAmount}</p>
+                    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white;">
+                        <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                         </div>
+                        <div style="padding: 30px;">
+                            <h2 style="color: #28a745; margin-bottom: 20px;">Order Received! 😊</h2>
+                            <p>Dear ${userResult?.first_name || 'Customer'} ${userResult?.last_name || ''},</p>
+                            <p>Thank you for your order! We have successfully received your order and it will be processed shortly. You'll receive a confirmation email once we begin processing.</p>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #28a745;">
+                                <h3 style="margin: 0 0 15px 0; color: #155724;">Order Summary:</h3>
+                                <p><strong>Order ID:</strong> #${orderId}</p>
+                                <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
+                                <p><strong>Payment Mode:</strong> ${paymentMode}</p>
+                                <p><strong>Subtotal:</strong> ₹${subtotal}</p>
+                                ${discount > 0 ? `<p><strong>Discount:</strong> -₹${discount}</p>` : ''}
+                                <p><strong>Total Amount:</strong> ₹${totalAmount}</p>
+                            </div>
 
                         <h3>Order Items:</h3>
                         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
@@ -1963,20 +1967,24 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
                         </div>
                         ` : ''}
 
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="https://bbqstyle.in/account?tab=orders" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Download Invoice & Track Order</a>
-                        </div>
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="https://bbqstyle.in/account?tab=orders" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">📋 Download Invoice & Track Order</a>
+                            </div>
 
-                        <p>We will process your order and send you tracking details once it's shipped.</p>
-                        <p>Thank you for shopping with BBQSTYLE!</p>
-                        <hr style="margin: 30px 0;">
-                        <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                            <p>We will process your order and send you tracking details once it's shipped. Thank you for choosing BBQSTYLE!</p>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                            <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                            <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                            <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                            <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                        </div>
                     </div>
                 `;
 
                 await sendEmail(
                     userResult.email,
-                    `Order Confirmation - #${orderId}`,
+                    `Order Received - #${orderId}`,
                     orderEmailHtml
                 );
             }
@@ -3526,16 +3534,25 @@ app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, re
                         <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
                     <div style="padding: 30px;">
-                        <h2 style="color: #28a745; margin-bottom: 20px;">Order Placed! 🎉</h2>
+                        <h2 style="color: #28a745; margin-bottom: 20px;">Order Confirmed! ✅</h2>
                         <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
-                        <p>Great news! Your order has been placed successfully and is being prepared for packing.</p>
-                        <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #28a745;">
-                            <h3 style="margin: 0 0 15px 0; color: #155724;">Order Details:</h3>
+                        <p>Excellent! Your order has been confirmed and we're now preparing it for packing. Our team is working diligently to ensure your items are carefully processed.</p>
+                        <div style="background: #d4edda; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #28a745;">
+                            <h3 style="margin: 0 0 15px 0; color: #155724;">Order Confirmation Details:</h3>
                             <p><strong>Order ID:</strong> #${orderId}</p>
-                            <p><strong>Status:</strong> CONFIRMED</p>
+                            <p><strong>Status:</strong> CONFIRMED & PROCESSING</p>
                             <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
+                            <p><strong>Payment Mode:</strong> ${orderResult.payment_mode}</p>
+                            <p><strong>Confirmation Date:</strong> ${new Date().toLocaleString()}</p>
                         </div>
-                        <p>We'll notify you once your order is packed and ready for shipment.</p>
+                        <div style="background: #e7f3ff; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #007bff;">
+                            <p style="margin: 0; color: #004085;"><strong>📦 What's Next:</strong></p>
+                            <p style="margin: 5px 0 0 0; color: #004085;">Your order is being prepared for packing. We'll send you another update once it's ready for shipment with tracking details.</p>
+                        </div>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="https://bbqstyle.in/account?tab=orders" style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">📋 View Order Details</a>
+                        </div>
+                        <p>Thank you for choosing BBQSTYLE. We appreciate your business and will keep you updated throughout the process!</p>
                     </div>
                     <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
                         <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
@@ -3546,7 +3563,7 @@ app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, re
                 </div>
             `;
             
-            await sendEmail(orderResult.email, `Order Placed - #${orderId}`, emailHtml);
+            await sendEmail(orderResult.email, `Order Confirmed - #${orderId}`, emailHtml);
         }
         
         res.json({ success: true, message: 'Order confirmed and email sent' });

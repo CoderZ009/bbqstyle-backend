@@ -59,15 +59,15 @@ async function sendEmail(to, subject, html, text = null) {
     
     try {
         const mailOptions = {
-            from: {
-                name: 'BBQSTYLE',
-                address: process.env.SMTP_USER,
-                avatar: 'https://bbqstyle.in/src/logo.png'
-            },
+            from: `"BBQSTYLE" <${process.env.SMTP_USER}>`,
             to: to,
             subject: subject,
             html: html,
-            text: text || html.replace(/<[^>]*>/g, '')
+            text: text || html.replace(/<[^>]*>/g, ''),
+            headers: {
+                'Message-ID': `<${Date.now()}-${Math.random()}@bbqstyle.in>`,
+                'X-Entity-Ref-ID': `order-${subject.includes('#') ? subject.split('#')[1]?.split(' ')[0] : Date.now()}`
+            }
         };
 
         console.log('Mail options:', mailOptions);
@@ -3255,6 +3255,7 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
 
         // Send status update email to customer
         if (orderResult.email) {
+            console.log('Sending status update email to:', orderResult.email);
             const statusMessages = {
                 'confirmed': { title: 'Order Confirmed', message: 'Your order has been confirmed and is being prepared.', color: '#28a745' },
                 'processing': { title: 'Order Processing', message: 'Your order is currently being processed.', color: '#ffc107' },
@@ -3284,15 +3285,26 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
                 </div>
             `;
 
-            await sendEmail(
-                orderResult.email,
-                `${statusInfo.title} - Order #${orderId}`,
-                statusEmailHtml
-            );
+            try {
+                const result = await sendEmail(
+                    orderResult.email,
+                    `${statusInfo.title} - Order #${orderId}`,
+                    statusEmailHtml
+                );
+                console.log('Status email result:', result);
+                
+                // Store message ID for threading
+                if (result.success && result.messageId) {
+                    db.query('UPDATE orders SET last_email_id = ? WHERE order_id = ?', [result.messageId, orderId], () => {});
+                }
+            } catch (emailError) {
+                console.error('Error sending status update email:', emailError);
+            }
         }
 
         // Send cancellation notification to admin if cancelled
         if (status === 'cancelled') {
+            console.log('Sending cancellation notification to admin');
             const adminEmailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
@@ -3309,11 +3321,16 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
                 </div>
             `;
 
-            await sendEmail(
-                'hardevi143@gmail.com',
-                `Order Cancelled - #${orderId}`,
-                adminEmailHtml
-            );
+            try {
+                await sendEmail(
+                    'hardevi143@gmail.com',
+                    `Order Cancelled - #${orderId}`,
+                    adminEmailHtml
+                );
+                console.log('Admin cancellation email sent');
+            } catch (emailError) {
+                console.error('Error sending admin cancellation email:', emailError);
+            }
         }
 
         res.json({ success: true, message: 'Order status updated successfully' });
@@ -3358,6 +3375,7 @@ app.put('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
 
         // Send cancellation email to customer
         if (orderResult.email) {
+            console.log('Sending customer cancellation email to:', orderResult.email);
             const cancelEmailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
@@ -3377,11 +3395,16 @@ app.put('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
                 </div>
             `;
 
-            await sendEmail(
-                orderResult.email,
-                `Order Cancelled - #${orderId}`,
-                cancelEmailHtml
-            );
+            try {
+                await sendEmail(
+                    orderResult.email,
+                    `Order Cancelled - #${orderId}`,
+                    cancelEmailHtml
+                );
+                console.log('Customer cancellation email sent');
+            } catch (emailError) {
+                console.error('Error sending customer cancellation email:', emailError);
+            }
         }
 
         // Send cancellation notification to admin
@@ -3400,11 +3423,16 @@ app.put('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
             </div>
         `;
 
-        await sendEmail(
-            'hardevi143@gmail.com',
-            `Order Cancelled by Customer - #${orderId}`,
-            adminEmailHtml
-        );
+        try {
+            await sendEmail(
+                'hardevi143@gmail.com',
+                `Order Cancelled by Customer - #${orderId}`,
+                adminEmailHtml
+            );
+            console.log('Admin notification email sent for customer cancellation');
+        } catch (emailError) {
+            console.error('Error sending admin notification email:', emailError);
+        }
 
         res.json({ success: true, message: 'Order cancelled successfully' });
     } catch (error) {

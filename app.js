@@ -3705,6 +3705,17 @@ app.put('/api/admin/orders/:orderId/out-for-delivery', isAuthenticated, async (r
         });
         
         if (orderResult && orderResult.email) {
+            const isCOD = orderResult.payment_mode === 'COD';
+            const paymentSection = isCOD ? 
+                `<div style="background: #fff3cd; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #ffc107; text-align: center;">
+                    <p style="margin: 0; color: #856404; font-size: 18px; font-weight: bold;">💵 Keep Cash Ready</p>
+                    <p style="margin: 5px 0 0 0; color: #856404; font-size: 16px;">₹${orderResult.total_amount}</p>
+                </div>` :
+                `<div style="background: #d4edda; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #28a745; text-align: center;">
+                    <p style="margin: 0; color: #155724; font-size: 18px; font-weight: bold;">✅ Amount Paid</p>
+                    <p style="margin: 5px 0 0 0; color: #155724; font-size: 16px;">₹${orderResult.total_amount}</p>
+                </div>`;
+            
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
@@ -3718,9 +3729,9 @@ app.put('/api/admin/orders/:orderId/out-for-delivery', isAuthenticated, async (r
                             <h3 style="margin: 0 0 15px 0; color: #856404;">Delivery Details:</h3>
                             <p><strong>Order ID:</strong> #${orderId}</p>
                             <p><strong>Status:</strong> OUT FOR DELIVERY</p>
-                            <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
                             <p><strong>Expected Delivery:</strong> Today</p>
                         </div>
+                        ${paymentSection}
                         <div style="background: #e7f3ff; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #007bff;">
                             <p style="margin: 0; color: #004085;"><strong>📞 Delivery Instructions:</strong></p>
                             <p style="margin: 5px 0 0 0; color: #004085;">Please keep your phone accessible. Our delivery partner will call you before delivery.</p>

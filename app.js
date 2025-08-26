@@ -1712,6 +1712,10 @@ app.post('/api/payment-webhook', async (req, res) => {
                         // Send order received notification to admin
                         const adminEmailHtml = `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                <div style="text-align: center; padding: 20px; background: #c3a4c6;">
+                                    <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                                </div>
+                                <div style="padding: 30px;">
                                 <h2 style="color: #007bff;">New Order Received - BBQSTYLE</h2>
                                 <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
                                     <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
@@ -1723,6 +1727,7 @@ app.post('/api/payment-webhook', async (req, res) => {
                                     <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
                                 </div>
                                 <p>Please process this order in the admin panel.</p>
+                                </div>
                             </div>
                         `;
 
@@ -1922,7 +1927,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
                 const orderEmailHtml = `
                     <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white;">
                         <div style="text-align: center; padding: 20px; background: #c3a4c6;">
-                            <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                            <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                         </div>
                         <div style="padding: 30px;">
                             <h2 style="color: #28a745; margin-bottom: 20px;">Order Received! 😊</h2>
@@ -2175,7 +2180,7 @@ app.post('/api/admin/send-email', isAuthenticated, async (req, res) => {
         if (type === 'newsletter') {
             emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <div style="background: rgba(248,228,253,255); padding: 30px; text-align: center;">
+                    <div style="background: #c3a4c6; padding: 30px; text-align: center;">
                         <h1 style="color: white; margin: 0;">BBQSTYLE Newsletter</h1>
                     </div>
                     <div style="padding: 30px; background: #f8f9fa;">
@@ -3531,7 +3536,7 @@ app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, re
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
-                        <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                        <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
                     <div style="padding: 30px;">
                         <h2 style="color: #28a745; margin-bottom: 20px;">Order Confirmed! ✅</h2>
@@ -3597,7 +3602,7 @@ app.put('/api/admin/orders/:orderId/ready', isAuthenticated, async (req, res) =>
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
-                        <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                        <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
                     <div style="padding: 30px;">
                         <h2 style="color: #17a2b8; margin-bottom: 20px;">Order Packed! 📦</h2>
@@ -3655,8 +3660,8 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
         if (orderResult && orderResult.email) {
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
-                    <div style="text-align: center; padding: 20px; background: rgb(248,228,253);">
-                        <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                    <div style="text-align: center; padding: 20px; background: #c3a4c6;">
+                        <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
                     <div style="padding: 30px;">
                         <h2 style="color: #6f42c1; margin-bottom: 20px;">Order Shipped! 🚚</h2>
@@ -3736,7 +3741,7 @@ app.put('/api/admin/orders/:orderId/out-for-delivery', isAuthenticated, async (r
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
-                        <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                        <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
                     <div style="padding: 30px;">
                         <h2 style="color: #ff9500; margin-bottom: 20px;">Out for Delivery! 🚛</h2>
@@ -3799,7 +3804,7 @@ app.put('/api/admin/orders/:orderId/delivered', isAuthenticated, async (req, res
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
-                        <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                        <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
                     <div style="padding: 30px;">
                         <h2 style="color: #28a745; margin-bottom: 20px;">Order Delivered! ✅</h2>
@@ -3877,7 +3882,7 @@ app.put('/api/admin/orders/:orderId/cancelled', isAuthenticated, async (req, res
                 const customerEmailHtml = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                         <div style="text-align: center; padding: 20px; background: #c3a4c6;">
-                            <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                            <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                         </div>
                         <div style="padding: 30px;">
                             <h2 style="color: #dc3545; margin-bottom: 20px;">Order Cancelled</h2>
@@ -3917,7 +3922,7 @@ app.put('/api/admin/orders/:orderId/cancelled', isAuthenticated, async (req, res
         try {
             const adminEmailHtml = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
-                        <div style="text-align: center; padding: 20px; background: rgb(248,228,253);">
+                        <div style="text-align: center; padding: 20px; background: #c3a4c6;">
                             <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                         </div>
                         <div style="padding: 30px;">
@@ -3933,8 +3938,8 @@ app.put('/api/admin/orders/:orderId/cancelled', isAuthenticated, async (req, res
                             </div>
                             <p>If you paid online, your refund will be processed within 5-7 business days.</p>
                             <div style="background: #e7f3ff; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #007bff; text-align: center;">
-                                <p style="margin: 0 0 10px 0; color: #004085; font-weight: 600;">Cancelled by mistake?</p>
-                                <a href="https://bbqstyle.in/account?tab=orders" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🛒 Reorder Now</a>
+                                <p style="margin: 0 0 10px 0; color: #004085; font-weight: 600;">View Order</p>
+                                <a href="https://admin.bbqstyle.in/?tab=orders" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">Click Here</a>
                             </div>
                         </div>
                         <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
@@ -3983,7 +3988,7 @@ app.put('/api/admin/orders/:orderId/out-of-stock', isAuthenticated, async (req, 
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
-                        <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                        <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
                     <div style="padding: 30px;">
                         <h2 style="color: #ffc107; margin-bottom: 20px;">Order On Hold ⏳</h2>

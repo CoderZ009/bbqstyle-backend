@@ -708,39 +708,116 @@ app.post('/api/register', (req, res) => {
     });
 });
 // Update email only endpoint
-app.post('/api/update-email', authenticateToken, (req, res) => {
+app.post('/api/update-email', authenticateToken, async (req, res) => {
     const userId = req.userId;
-    const { email } = req.body;
+    const { email, orderId } = req.body;
 
     if (!email) {
         return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
-    // Check if email is already used by another user
-    db.query('SELECT user_id FROM users WHERE email = ? AND user_id != ?', [email, userId], (err, results) => {
-        if (err) {
-            console.error('Database error during email check:', err);
-            return res.status(500).json({ success: false, message: 'Database error' });
-        }
+    try {
+        // Check if email is already used by another user
+        const existingUser = await new Promise((resolve, reject) => {
+            db.query('SELECT user_id FROM users WHERE email = ? AND user_id != ?', [email, userId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
         
-        if (results.length > 0) {
+        if (existingUser) {
             return res.status(409).json({ success: false, message: 'Email is already in use by another account' });
         }
 
         // Update user email
-        db.query('UPDATE users SET email = ? WHERE user_id = ?', [email, userId], (updateErr, result) => {
-            if (updateErr) {
-                console.error('Database error during email update:', updateErr);
-                return res.status(500).json({ success: false, message: 'Database error' });
-            }
-
-            if (result.affectedRows === 0) {
-                return res.status(404).json({ success: false, message: 'User not found' });
-            }
-
-            res.json({ success: true, message: 'Email updated successfully' });
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE users SET email = ? WHERE user_id = ?', [email, userId], (err, result) => {
+                if (err) reject(err);
+                else if (result.affectedRows === 0) reject(new Error('User not found'));
+                else resolve();
+            });
         });
-    });
+
+        // Send order received email if orderId is provided
+        if (orderId) {
+            const userResult = await new Promise((resolve, reject) => {
+                db.query('SELECT first_name, last_name FROM users WHERE user_id = ?', [userId], (err, results) => {
+                    if (err) reject(err);
+                    else resolve(results[0]);
+                });
+            });
+
+            const orderEmailHtml = `
+                    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white;">
+                        <div style="text-align: center; padding: 20px; background: #c3a4c6;">
+                            <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                        </div>
+                        <div style="padding: 30px;">
+                            <h2 style="color: #28a745; margin-bottom: 20px;">Order Received! 😊</h2>
+                            <p>Dear ${userResult?.first_name || 'Customer'} ${userResult?.last_name || ''},</p>
+                            <p>Thank you for your order! We have successfully received your order and it will be processed shortly. You'll receive a confirmation email once we begin processing.</p>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #28a745;">
+                                <h3 style="margin: 0 0 15px 0; color: #155724;">Order Summary:</h3>
+                                <p><strong>Order ID:</strong> #${orderId}</p>
+                                <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
+                                <p><strong>Payment Mode:</strong> ${paymentMode}</p>
+                                <p><strong>Subtotal:</strong> ₹${subtotal}</p>
+                                ${discount > 0 ? `<p><strong>Discount:</strong> -₹${discount}</p>` : ''}
+                                <p><strong>Total Amount:</strong> ₹${totalAmount}</p>
+                            </div>
+
+                        <h3>Order Items:</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                            <thead>
+                                <tr style="background: #f8f9fa;">
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Image</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Product</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Variant</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Qty</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Price</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${customerItemsHtml}
+                            </tbody>
+                        </table>
+
+                        ${orderAddress ? `
+                        <div style="background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
+                            <h3 style="margin: 0 0 10px 0;">Delivery Address:</h3>
+                            <p><strong>${orderAddress.full_name}</strong></p>
+                            <p>${orderAddress.address_line1}</p>
+                            ${orderAddress.address_line2 ? `<p>${orderAddress.address_line2}</p>` : ''}
+                            <p>${orderAddress.city}, ${orderAddress.state} - ${orderAddress.pincode}</p>
+                            <p>Phone: ${orderAddress.mobile_no}</p>
+                        </div>
+                        ` : ''}
+
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="https://bbqstyle.in/account?tab=orders" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">📋 Download Invoice & Track Order</a>
+                            </div>
+
+                            <p>We will process your order and send you tracking details once it's shipped. Thank you for choosing BBQSTYLE!</p>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                            <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                            <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                            <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                            <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                        </div>
+                    </div>
+                `;
+
+            await sendEmail(email, `Order Received - #${orderId}`, orderEmailHtml);
+        }
+
+        res.json({ success: true, message: 'Email updated successfully' });
+    } catch (error) {
+        console.error('Error updating email:', error);
+        res.status(500).json({ success: false, message: 'Database error' });
+    }
 });
 
 // Update user profile endpoint
@@ -2181,16 +2258,24 @@ app.post('/api/admin/send-email', isAuthenticated, async (req, res) => {
         
         if (type === 'newsletter') {
             emailHtml = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <div style="background: #c3a4c6; padding: 30px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">BBQSTYLE Newsletter</h1>
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; padding: 20px; background: #c3a4c6;">
+                        <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
-                    <div style="padding: 30px; background: #f8f9fa;">
-                        ${message.replace(/\n/g, '<br>')}
+                    <div style="padding: 30px;">
+                        <h2 style="color: #007bff; margin-bottom: 20px;">📧 BBQSTYLE Newsletter</h2>
+                        <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #007bff;">
+                            ${message.replace(/\n/g, '<br>')}
+                        </div>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="https://bbqstyle.in" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🛒 Shop Now</a>
+                        </div>
                     </div>
-                    <div style="background: #333; color: white; padding: 20px; text-align: center;">
-                        <p style="margin: 0;">BBQSTYLE - India's Premium Clothing Store</p>
-                        <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.8;">Visit us at www.bbqstyle.in</p>
+                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 10px 0; font-weight: 600;">Stay Connected</p>
+                        <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                        <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                        <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
                     </div>
                 </div>
             `;
@@ -2242,18 +2327,26 @@ app.post('/api/admin/send-newsletter', isAuthenticated, async (req, res) => {
         }
 
         const emailHtml = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background: #c3a4c6; padding: 30px; text-align: center;">
-                    <h1 style="color: white; margin: 0;">BBQSTYLE Newsletter</h1>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                <div style="text-align: center; padding: 20px; background: #c3a4c6;">
+                    <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                 </div>
-                <div style="padding: 30px; background: #f8f9fa;">
-                    ${message.replace(/\n/g, '<br>')}
+                <div style="padding: 30px;">
+                    <h2 style="color: #007bff; margin-bottom: 20px;">📧 BBQSTYLE Newsletter</h2>
+                    <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #007bff;">
+                        ${message.replace(/\n/g, '<br>')}
+                    </div>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="https://bbqstyle.in" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🛒 Shop Now</a>
+                    </div>
                 </div>
-                <div style="background: #333; color: white; padding: 20px; text-align: center;">
-                    <p style="margin: 0;">BBQSTYLE - India's Premium Clothing Store</p>
-                    <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.8;">Visit us at www.bbqstyle.in</p>
-                    <p style="margin: 10px 0 0 0; font-size: 10px; opacity: 0.6;">
-                        <a href="#" style="color: #ccc;">Unsubscribe</a>
+                <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                    <p style="margin: 0 0 10px 0; font-weight: 600;">Stay Connected</p>
+                    <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                    <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                    <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    <p style="margin: 10px 0 0 0; font-size: 10px; color: #999;">
+                        <a href="#" style="color: #999;">Unsubscribe</a>
                     </p>
                 </div>
             </div>

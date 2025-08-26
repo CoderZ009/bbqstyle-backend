@@ -59,16 +59,15 @@ async function sendEmail(to, subject, html, text = null) {
     
     try {
         const mailOptions = {
-            from: `"BBQSTYLE" <${process.env.SMTP_USER}>`,
+            from: {
+                name: 'BBQSTYLE',
+                address: process.env.SMTP_USER,
+                avatar: 'https://bbqstyle.in/src/logo.png'
+            },
             to: to,
             subject: subject,
             html: html,
-            text: text || html.replace(/<[^>]*>/g, ''),
-            attachments: [{
-                filename: 'logo.png',
-                path: 'https://bbqstyle.in/src/logo.png',
-                cid: 'logo'
-            }]
+            text: text || html.replace(/<[^>]*>/g, '')
         };
 
         console.log('Mail options:', mailOptions);
@@ -112,7 +111,7 @@ app.post('/api/test-email', async (req, res) => {
         const result = await sendEmail(
             to,
             'Test Email - BBQSTYLE',
-'<div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div><h1>Test Email</h1><p>If you receive this, SMTP is working!</p>'
+'<h1>Test Email</h1><p>If you receive this, SMTP is working!</p>'
         );
         
         res.json({ success: result.success, message: result.success ? 'Email sent' : result.error });
@@ -1574,7 +1573,6 @@ app.post('/api/payment-webhook', async (req, res) => {
                     if (userResult && userResult.email) {
                         const paymentEmailHtml = `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                                 <h2 style="color: #28a745;">Payment Successful - BBQSTYLE</h2>
                                 <p>Dear ${userResult.first_name} ${userResult.last_name},</p>
                                 <p>Your payment has been successfully processed!</p>
@@ -1600,7 +1598,6 @@ app.post('/api/payment-webhook', async (req, res) => {
                         // Send order received notification to admin
                         const adminEmailHtml = `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                                 <h2 style="color: #007bff;">New Order Received - BBQSTYLE</h2>
                                 <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
                                     <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
@@ -1773,7 +1770,6 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
             if (userResult && userResult.email) {
                 const orderEmailHtml = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                         <h2 style="color: #333;">Order Confirmation - BBQSTYLE</h2>
                         <p>Dear ${userResult.first_name} ${userResult.last_name},</p>
                         <p>Thank you for your order! Your order has been successfully placed.</p>
@@ -1804,7 +1800,6 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
         try {
             const adminEmailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                     <h2 style="color: #007bff;">New Order Received - BBQSTYLE</h2>
                     <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
                         <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
@@ -1929,7 +1924,6 @@ app.post('/api/admin/send-email', isAuthenticated, async (req, res) => {
         if (type === 'newsletter') {
             emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
                         <h1 style="color: white; margin: 0;">BBQSTYLE Newsletter</h1>
                     </div>
@@ -1945,7 +1939,6 @@ app.post('/api/admin/send-email', isAuthenticated, async (req, res) => {
         } else {
             emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                     <h2 style="color: #333;">${subject}</h2>
                     <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
                         ${message.replace(/\n/g, '<br>')}
@@ -1992,7 +1985,6 @@ app.post('/api/admin/send-newsletter', isAuthenticated, async (req, res) => {
 
         const emailHtml = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
                     <h1 style="color: white; margin: 0;">BBQSTYLE Newsletter</h1>
                 </div>
@@ -3276,7 +3268,6 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
 
             const statusEmailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                     <h2 style="color: ${statusInfo.color};">${statusInfo.title} - BBQSTYLE</h2>
                     <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
                     <p>${statusInfo.message}</p>
@@ -3396,7 +3387,6 @@ app.put('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
         // Send cancellation notification to admin
         const adminEmailHtml = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                 <h2 style="color: #dc3545;">Order Cancelled by Customer - BBQSTYLE</h2>
                 <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;">
                     <h3 style="margin: 0 0 15px 0;">Cancelled Order Details:</h3>
@@ -3627,7 +3617,6 @@ app.post('/api/subscribers', async (req, res) => {
             try {
                 const welcomeEmailHtml = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                         <h2 style="color: #333;">Welcome to BBQSTYLE Newsletter!</h2>
                         <p>Dear ${customer_name},</p>
                         <p>Thank you for subscribing to our newsletter! You're now part of the BBQSTYLE family.</p>
@@ -3672,7 +3661,6 @@ app.post('/api/contact', async (req, res) => {
         // Send email to admin
         const contactEmailHtml = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                 <h2 style="color: #333;">New Contact Form Submission</h2>
                 <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
                     <p><strong>Name:</strong> ${name}</p>
@@ -3696,7 +3684,6 @@ app.post('/api/contact', async (req, res) => {
         // Send confirmation email to user
         const confirmationEmailHtml = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                 <h2 style="color: #333;">Thank you for contacting BBQSTYLE!</h2>
                 <p>Dear ${name},</p>
                 <p>We have received your message and will get back to you within 24-48 hours.</p>

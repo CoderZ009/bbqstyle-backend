@@ -3477,7 +3477,410 @@ app.get('/api/admin/orders', isAuthenticated, (req, res) => {
     });
 });
 
-// Update order status with email notifications
+// Individual status update APIs with email triggers
+
+// Update to Pending
+app.put('/api/admin/orders/:orderId/pending', isAuthenticated, async (req, res) => {
+    const orderId = req.params.orderId;
+    
+    try {
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE orders SET status = "pending" WHERE order_id = ?', [orderId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        
+        res.json({ success: true, message: 'Order status updated to pending' });
+    } catch (error) {
+        console.error('Error updating to pending:', error);
+        res.status(500).json({ error: 'Failed to update order status' });
+    }
+});
+
+// Update to Processing (sends confirmation email)
+app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, res) => {
+    const orderId = req.params.orderId;
+    
+    try {
+        const orderResult = await new Promise((resolve, reject) => {
+            const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
+            db.query(query, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE orders SET status = "processing" WHERE order_id = ?', [orderId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        
+        if (orderResult && orderResult.email) {
+            const emailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                    </div>
+                    <div style="padding: 30px;">
+                        <h2 style="color: #28a745; margin-bottom: 20px;">Order Confirmed! 🎉</h2>
+                        <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                        <p>Great news! Your order has been confirmed and is being prepared for packing.</p>
+                        <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #28a745;">
+                            <h3 style="margin: 0 0 15px 0; color: #155724;">Order Details:</h3>
+                            <p><strong>Order ID:</strong> #${orderId}</p>
+                            <p><strong>Status:</strong> CONFIRMED</p>
+                            <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
+                        </div>
+                        <p>We'll notify you once your order is packed and ready for shipment.</p>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                        <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                        <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                        <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    </div>
+                </div>
+            `;
+            
+            await sendEmail(orderResult.email, `Order Confirmed - #${orderId}`, emailHtml);
+        }
+        
+        res.json({ success: true, message: 'Order confirmed and email sent' });
+    } catch (error) {
+        console.error('Error updating to processing:', error);
+        res.status(500).json({ error: 'Failed to update order status' });
+    }
+});
+
+// Update to Ready (sends packed email)
+app.put('/api/admin/orders/:orderId/ready', isAuthenticated, async (req, res) => {
+    const orderId = req.params.orderId;
+    
+    try {
+        const orderResult = await new Promise((resolve, reject) => {
+            const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
+            db.query(query, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE orders SET status = "ready" WHERE order_id = ?', [orderId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        
+        if (orderResult && orderResult.email) {
+            const emailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                    </div>
+                    <div style="padding: 30px;">
+                        <h2 style="color: #17a2b8; margin-bottom: 20px;">Order Packed! 📦</h2>
+                        <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                        <p>Your order has been carefully packed and is ready for shipment!</p>
+                        <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #17a2b8;">
+                            <h3 style="margin: 0 0 15px 0; color: #0c5460;">Order Details:</h3>
+                            <p><strong>Order ID:</strong> #${orderId}</p>
+                            <p><strong>Status:</strong> PACKED & READY</p>
+                            <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
+                        </div>
+                        <p>Your order will be shipped soon. We'll send you tracking details once it's dispatched.</p>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                        <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                        <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                        <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    </div>
+                </div>
+            `;
+            
+            await sendEmail(orderResult.email, `Order Packed - #${orderId}`, emailHtml);
+        }
+        
+        res.json({ success: true, message: 'Order marked as ready and email sent' });
+    } catch (error) {
+        console.error('Error updating to ready:', error);
+        res.status(500).json({ error: 'Failed to update order status' });
+    }
+});
+
+// Update to Shipped
+app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) => {
+    const orderId = req.params.orderId;
+    const { trackingId, trackingLink, carrier } = req.body;
+    
+    try {
+        const orderResult = await new Promise((resolve, reject) => {
+            const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
+            db.query(query, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE orders SET status = "shipped", tracking_id = ?, tracking_link = ?, carrier = ? WHERE order_id = ?', 
+                [trackingId || '', trackingLink || '', carrier || '', orderId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        
+        if (orderResult && orderResult.email) {
+            const emailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                    </div>
+                    <div style="padding: 30px;">
+                        <h2 style="color: #6f42c1; margin-bottom: 20px;">Order Shipped! 🚚</h2>
+                        <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                        <p>Great news! Your order is on its way to you!</p>
+                        <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #6f42c1;">
+                            <h3 style="margin: 0 0 15px 0; color: #495057;">Shipping Details:</h3>
+                            <p><strong>Order ID:</strong> #${orderId}</p>
+                            <p><strong>Status:</strong> SHIPPED</p>
+                            <p><strong>Carrier:</strong> ${carrier || 'Standard Delivery'}</p>
+                            <p><strong>AWB Number:</strong> ${trackingId || 'Will be updated soon'}</p>
+                        </div>
+                        ${trackingLink ? `
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${trackingLink}" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🔍 Track Your Order</a>
+                        </div>
+                        ` : ''}
+                        <p>You'll receive your order soon. Thank you for your patience!</p>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                        <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                        <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                        <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    </div>
+                </div>
+            `;
+            
+            await sendEmail(orderResult.email, `Order Shipped - #${orderId}`, emailHtml);
+        }
+        
+        res.json({ success: true, message: 'Order marked as shipped and email sent' });
+    } catch (error) {
+        console.error('Error updating to shipped:', error);
+        res.status(500).json({ error: 'Failed to update order status' });
+    }
+});
+
+// Update to Delivered
+app.put('/api/admin/orders/:orderId/delivered', isAuthenticated, async (req, res) => {
+    const orderId = req.params.orderId;
+    
+    try {
+        const orderResult = await new Promise((resolve, reject) => {
+            const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
+            db.query(query, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE orders SET status = "delivered" WHERE order_id = ?', [orderId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        
+        if (orderResult && orderResult.email) {
+            const emailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                    </div>
+                    <div style="padding: 30px;">
+                        <h2 style="color: #28a745; margin-bottom: 20px;">Order Delivered! ✅</h2>
+                        <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                        <p>Congratulations! Your order has been delivered successfully!</p>
+                        <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #28a745;">
+                            <h3 style="margin: 0 0 15px 0; color: #155724;">Order Details:</h3>
+                            <p><strong>Order ID:</strong> #${orderId}</p>
+                            <p><strong>Status:</strong> DELIVERED</p>
+                            <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
+                        </div>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="https://bbqstyle.in/account?tab=orders" style="background: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">⭐ Write a Review</a>
+                        </div>
+                        <p>We hope you love your purchase! Your feedback helps us serve you better.</p>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                        <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                        <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                        <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    </div>
+                </div>
+            `;
+            
+            await sendEmail(orderResult.email, `Order Delivered - #${orderId}`, emailHtml);
+        }
+        
+        res.json({ success: true, message: 'Order marked as delivered and email sent' });
+    } catch (error) {
+        console.error('Error updating to delivered:', error);
+        res.status(500).json({ error: 'Failed to update order status' });
+    }
+});
+
+// Update to Cancelled
+app.put('/api/admin/orders/:orderId/cancelled', isAuthenticated, async (req, res) => {
+    const orderId = req.params.orderId;
+    const { cancelReason, cancelComment, cancelledBy } = req.body;
+    
+    try {
+        const orderResult = await new Promise((resolve, reject) => {
+            const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
+            db.query(query, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE orders SET status = "cancelled", cancelled_by = ?, cancel_reason = ?, cancel_comment = ? WHERE order_id = ?', 
+                [cancelledBy || 'Admin', cancelReason || '', cancelComment || '', orderId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        
+        // Send email to customer
+        if (orderResult && orderResult.email) {
+            const customerEmailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                    </div>
+                    <div style="padding: 30px;">
+                        <h2 style="color: #dc3545; margin-bottom: 20px;">Order Cancelled</h2>
+                        <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                        <p>We regret to inform you that your order has been cancelled.</p>
+                        <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #dc3545;">
+                            <h3 style="margin: 0 0 15px 0; color: #721c24;">Cancellation Details:</h3>
+                            <p><strong>Order ID:</strong> #${orderId}</p>
+                            <p><strong>Cancelled By:</strong> ${cancelledBy || 'Admin'}</p>
+                            <p><strong>Reason:</strong> ${cancelReason || 'Not specified'}</p>
+                            ${cancelComment ? `<p><strong>Comment:</strong> ${cancelComment}</p>` : ''}
+                        </div>
+                        <p>If you paid online, your refund will be processed within 5-7 business days.</p>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                        <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                        <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                        <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    </div>
+                </div>
+            `;
+            
+            await sendEmail(orderResult.email, `Order Cancelled - #${orderId}`, customerEmailHtml);
+        }
+        
+        // Send email to admin
+        const adminEmailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                </div>
+                <div style="padding: 30px;">
+                    <h2 style="color: #dc3545; margin-bottom: 20px;">Order Cancelled - Admin Notification</h2>
+                    <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #dc3545;">
+                        <h3 style="margin: 0 0 15px 0; color: #721c24;">Cancelled Order Details:</h3>
+                        <p><strong>Order ID:</strong> #${orderId}</p>
+                        <p><strong>Customer:</strong> ${orderResult?.first_name || 'N/A'} ${orderResult?.last_name || ''}</p>
+                        <p><strong>Email:</strong> ${orderResult?.email || 'N/A'}</p>
+                        <p><strong>Total Amount:</strong> ₹${orderResult?.total_amount}</p>
+                        <p><strong>Cancelled By:</strong> ${cancelledBy || 'Admin'}</p>
+                        <p><strong>Reason:</strong> ${cancelReason || 'Not specified'}</p>
+                        ${cancelComment ? `<p><strong>Comment:</strong> ${cancelComment}</p>` : ''}
+                        <p><strong>Cancellation Date:</strong> ${new Date().toLocaleString()}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        await sendEmail('support@bbqstyle.in', `Order Cancelled - #${orderId}`, adminEmailHtml);
+        
+        res.json({ success: true, message: 'Order cancelled and emails sent' });
+    } catch (error) {
+        console.error('Error updating to cancelled:', error);
+        res.status(500).json({ error: 'Failed to update order status' });
+    }
+});
+
+// Update to Out of Stock
+app.put('/api/admin/orders/:orderId/out-of-stock', isAuthenticated, async (req, res) => {
+    const orderId = req.params.orderId;
+    
+    try {
+        const orderResult = await new Promise((resolve, reject) => {
+            const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
+            db.query(query, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE orders SET status = "out_of_stock" WHERE order_id = ?', [orderId], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+        
+        if (orderResult && orderResult.email) {
+            const emailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                    </div>
+                    <div style="padding: 30px;">
+                        <h2 style="color: #ffc107; margin-bottom: 20px;">Order On Hold ⏳</h2>
+                        <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                        <p>We're sorry to inform you that some items in your order are currently out of stock.</p>
+                        <div style="background: #fff3cd; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #ffc107;">
+                            <h3 style="margin: 0 0 15px 0; color: #856404;">Order Details:</h3>
+                            <p><strong>Order ID:</strong> #${orderId}</p>
+                            <p><strong>Status:</strong> ON HOLD</p>
+                            <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
+                        </div>
+                        <p>We'll notify you as soon as the items are back in stock and ready to ship.</p>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                        <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                        <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                        <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    </div>
+                </div>
+            `;
+            
+            await sendEmail(orderResult.email, `Order On Hold - #${orderId}`, emailHtml);
+        }
+        
+        res.json({ success: true, message: 'Order marked as out of stock and email sent' });
+    } catch (error) {
+        console.error('Error updating to out of stock:', error);
+        res.status(500).json({ error: 'Failed to update order status' });
+    }
+});
+
+// Keep the original status update endpoint for backward compatibility
 app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) => {
     const orderId = req.params.orderId;
     const { status, cancelledBy, cancelReason, cancelComment, trackingId, trackingLink, carrier } = req.body;
@@ -3609,7 +4012,7 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
             }
         }
 
-        res.json({ success: true, message: 'Order status updated and email sent successfully' });
+        res.json({ success: true, message: 'Order status updated successfully' });
     } catch (error) {
         console.error('Error updating order status:', error);
         res.status(500).json({ error: 'Failed to update order status' });

@@ -1574,7 +1574,7 @@ app.post('/api/payment-webhook', async (req, res) => {
                         const paymentEmailHtml = `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                                 <h2 style="color: #28a745;">Payment Successful - BBQSTYLE</h2>
-                                <p>Dear ${userResult.first_name} ${userResult.last_name},</p>
+                                <p>Dear ${userResult?.first_name || 'Customer'} ${userResult?.last_name || ''},</p>
                                 <p>Your payment has been successfully processed!</p>
                                 <div style="background: #d4edda; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #28a745;">
                                     <h3 style="margin: 0 0 10px 0; color: #155724;">Payment Details:</h3>
@@ -1602,8 +1602,8 @@ app.post('/api/payment-webhook', async (req, res) => {
                                 <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
                                     <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
                                     <p><strong>Order ID:</strong> #${actualOrderId}</p>
-                                    <p><strong>Customer:</strong> ${userResult.first_name} ${userResult.last_name}</p>
-                                    <p><strong>Email:</strong> ${userResult.email}</p>
+                                    <p><strong>Customer:</strong> ${userResult?.first_name || 'N/A'} ${userResult?.last_name || ''}</p>
+                                    <p><strong>Email:</strong> ${userResult?.email || 'N/A'}</p>
                                     <p><strong>Total Amount:</strong> ₹${tempOrder.total_amount}</p>
                                     <p><strong>Payment Mode:</strong> Online</p>
                                     <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
@@ -1771,7 +1771,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
                 const orderEmailHtml = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                         <h2 style="color: #333;">Order Confirmation - BBQSTYLE</h2>
-                        <p>Dear ${userResult.first_name} ${userResult.last_name},</p>
+                        <p>Dear ${userResult?.first_name || 'Customer'} ${userResult?.last_name || ''},</p>
                         <p>Thank you for your order! Your order has been successfully placed.</p>
                         <div style="background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;">
                             <h3 style="margin: 0 0 10px 0;">Order Details:</h3>
@@ -1804,8 +1804,8 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
                     <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
                         <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
                         <p><strong>Order ID:</strong> #${orderId}</p>
-                        <p><strong>Customer:</strong> ${userResult?.first_name} ${userResult?.last_name}</p>
-                        <p><strong>Email:</strong> ${userResult?.email}</p>
+                        <p><strong>Customer:</strong> ${userResult?.first_name || 'N/A'} ${userResult?.last_name || ''}</p>
+                        <p><strong>Email:</strong> ${userResult?.email || 'N/A'}</p>
                         <p><strong>Total Amount:</strong> ₹${totalAmount}</p>
                         <p><strong>Payment Mode:</strong> ${paymentMode}</p>
                         <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
@@ -1819,6 +1819,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
                 `New Order Received - #${orderId}`,
                 adminEmailHtml
             );
+            console.log('Admin order notification email sent');
         } catch (emailError) {
             console.error('Error sending admin notification email:', emailError);
         }
@@ -3270,7 +3271,7 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
             const statusEmailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: ${statusInfo.color};">${statusInfo.title} - BBQSTYLE</h2>
-                    <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                    <p>Dear ${orderResult?.first_name || 'Customer'} ${orderResult?.last_name || ''},</p>
                     <p>${statusInfo.message}</p>
                     <div style="background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid ${statusInfo.color};">
                         <h3 style="margin: 0 0 10px 0;">Order Details:</h3>
@@ -3312,8 +3313,8 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
                     <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;">
                         <h3 style="margin: 0 0 15px 0;">Cancelled Order Details:</h3>
                         <p><strong>Order ID:</strong> #${orderId}</p>
-                        <p><strong>Customer:</strong> ${orderResult.first_name} ${orderResult.last_name}</p>
-                        <p><strong>Email:</strong> ${orderResult.email}</p>
+                        <p><strong>Customer:</strong> ${orderResult?.first_name || 'N/A'} ${orderResult?.last_name || ''}</p>
+                        <p><strong>Email:</strong> ${orderResult?.email || 'N/A'}</p>
                         <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
                         <p><strong>Cancelled By:</strong> ${cancelledBy || 'System'}</p>
                         <p><strong>Cancellation Date:</strong> ${new Date().toLocaleString()}</p>
@@ -3380,7 +3381,7 @@ app.put('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <div style="text-align: center; margin-bottom: 20px;"><img src="cid:logo" alt="BBQSTYLE" style="max-width: 200px; height: auto;"></div>
                     <h2 style="color: #dc3545;">Order Cancelled - BBQSTYLE</h2>
-                    <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                    <p>Dear ${orderResult?.first_name || 'Customer'} ${orderResult?.last_name || ''},</p>
                     <p>Your order has been successfully cancelled as requested.</p>
                     <div style="background: #f8d7da; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;">
                         <h3 style="margin: 0 0 10px 0;">Cancelled Order Details:</h3>
@@ -3414,8 +3415,8 @@ app.put('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
                 <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;">
                     <h3 style="margin: 0 0 15px 0;">Cancelled Order Details:</h3>
                     <p><strong>Order ID:</strong> #${orderId}</p>
-                    <p><strong>Customer:</strong> ${orderResult.first_name} ${orderResult.last_name}</p>
-                    <p><strong>Email:</strong> ${orderResult.email}</p>
+                    <p><strong>Customer:</strong> ${orderResult?.first_name || 'N/A'} ${orderResult?.last_name || ''}</p>
+                    <p><strong>Email:</strong> ${orderResult?.email || 'N/A'}</p>
                     <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
                     <p><strong>Cancelled By:</strong> Customer</p>
                     <p><strong>Cancellation Date:</strong> ${new Date().toLocaleString()}</p>

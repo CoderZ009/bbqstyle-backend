@@ -59,7 +59,7 @@ async function sendEmail(to, subject, html, text = null) {
     
     try {
         const mailOptions = {
-            from: `"BBQ Style" <${process.env.SMTP_USER}>`,
+            from: `"BBQSTYLE" <${process.env.SMTP_USER}>`,
             to: to,
             subject: subject,
             html: html,
@@ -106,7 +106,7 @@ app.post('/api/test-email', async (req, res) => {
     try {
         const result = await sendEmail(
             to,
-            'Test Email - BBQ Style',
+            'Test Email - BBQSTYLE',
             '<h1>Test Email</h1><p>If you receive this, SMTP is working!</p>'
         );
         
@@ -131,13 +131,13 @@ app.post('/api/admin/test-smtp', isAuthenticated, async (req, res) => {
                 </div>
                 <p>If you received this email, your SMTP configuration is working properly!</p>
                 <hr style="margin: 30px 0;">
-                <p style="color: #666; font-size: 12px;">BBQ Style - SMTP Test Email</p>
+                <p style="color: #666; font-size: 12px;">BBQSTYLE - SMTP Test Email</p>
             </div>
         `;
 
         const result = await sendEmail(
             process.env.ADMIN_EMAIL || process.env.SMTP_USER,
-            'SMTP Test - BBQ Style',
+            'SMTP Test - BBQSTYLE',
             testEmailHtml
         );
 
@@ -994,7 +994,7 @@ app.get('/api/orders/:orderId/invoice', (req, res) => {
 
             const invoice = {
                 company: {
-                    name: 'BBQ Style',
+                    name: 'BBQSTYLE',
                     address: 'Kolkata, West Bengal, India',
                     gstin: '19AABCU9603R1ZM',
                     email: 'support@bbqstyle.in',
@@ -1569,7 +1569,7 @@ app.post('/api/payment-webhook', async (req, res) => {
                     if (userResult && userResult.email) {
                         const paymentEmailHtml = `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                <h2 style="color: #28a745;">Payment Successful - BBQ Style</h2>
+                                <h2 style="color: #28a745;">Payment Successful - BBQSTYLE</h2>
                                 <p>Dear ${userResult.first_name} ${userResult.last_name},</p>
                                 <p>Your payment has been successfully processed!</p>
                                 <div style="background: #d4edda; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #28a745;">
@@ -1579,9 +1579,9 @@ app.post('/api/payment-webhook', async (req, res) => {
                                     <p><strong>Payment Status:</strong> Successful</p>
                                 </div>
                                 <p>Your order is now being processed and you will receive shipping updates soon.</p>
-                                <p>Thank you for choosing BBQ Style!</p>
+                                <p>Thank you for choosing BBQSTYLE!</p>
                                 <hr style="margin: 30px 0;">
-                                <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                                <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
                             </div>
                         `;
 
@@ -1594,7 +1594,7 @@ app.post('/api/payment-webhook', async (req, res) => {
                         // Send order received notification to admin
                         const adminEmailHtml = `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                <h2 style="color: #007bff;">New Order Received - BBQ Style</h2>
+                                <h2 style="color: #007bff;">New Order Received - BBQSTYLE</h2>
                                 <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
                                     <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
                                     <p><strong>Order ID:</strong> #${actualOrderId}</p>
@@ -1766,7 +1766,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
             if (userResult && userResult.email) {
                 const orderEmailHtml = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #333;">Order Confirmation - BBQ Style</h2>
+                        <h2 style="color: #333;">Order Confirmation - BBQSTYLE</h2>
                         <p>Dear ${userResult.first_name} ${userResult.last_name},</p>
                         <p>Thank you for your order! Your order has been successfully placed.</p>
                         <div style="background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;">
@@ -1776,9 +1776,9 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
                             <p><strong>Payment Mode:</strong> ${paymentMode}</p>
                         </div>
                         <p>We will process your order and send you tracking details once it's shipped.</p>
-                        <p>Thank you for shopping with BBQ Style!</p>
+                        <p>Thank you for shopping with BBQSTYLE!</p>
                         <hr style="margin: 30px 0;">
-                        <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                        <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
                     </div>
                 `;
 
@@ -1796,7 +1796,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
         try {
             const adminEmailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #007bff;">New Order Received - BBQ Style</h2>
+                    <h2 style="color: #007bff;">New Order Received - BBQSTYLE</h2>
                     <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
                         <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
                         <p><strong>Order ID:</strong> #${orderId}</p>
@@ -1921,13 +1921,13 @@ app.post('/api/admin/send-email', isAuthenticated, async (req, res) => {
             emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">BBQ Style Newsletter</h1>
+                        <h1 style="color: white; margin: 0;">BBQSTYLE Newsletter</h1>
                     </div>
                     <div style="padding: 30px; background: #f8f9fa;">
                         ${message.replace(/\n/g, '<br>')}
                     </div>
                     <div style="background: #333; color: white; padding: 20px; text-align: center;">
-                        <p style="margin: 0;">BBQ Style - India's Premium Clothing Store</p>
+                        <p style="margin: 0;">BBQSTYLE - India's Premium Clothing Store</p>
                         <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.8;">Visit us at www.bbqstyle.in</p>
                     </div>
                 </div>
@@ -1940,7 +1940,7 @@ app.post('/api/admin/send-email', isAuthenticated, async (req, res) => {
                         ${message.replace(/\n/g, '<br>')}
                     </div>
                     <hr style="margin: 30px 0;">
-                    <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                    <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
                 </div>
             `;
         }
@@ -1982,13 +1982,13 @@ app.post('/api/admin/send-newsletter', isAuthenticated, async (req, res) => {
         const emailHtml = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-                    <h1 style="color: white; margin: 0;">BBQ Style Newsletter</h1>
+                    <h1 style="color: white; margin: 0;">BBQSTYLE Newsletter</h1>
                 </div>
                 <div style="padding: 30px; background: #f8f9fa;">
                     ${message.replace(/\n/g, '<br>')}
                 </div>
                 <div style="background: #333; color: white; padding: 20px; text-align: center;">
-                    <p style="margin: 0;">BBQ Style - India's Premium Clothing Store</p>
+                    <p style="margin: 0;">BBQSTYLE - India's Premium Clothing Store</p>
                     <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.8;">Visit us at www.bbqstyle.in</p>
                     <p style="margin: 10px 0 0 0; font-size: 10px; opacity: 0.6;">
                         <a href="#" style="color: #ccc;">Unsubscribe</a>
@@ -3264,7 +3264,7 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
 
             const statusEmailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: ${statusInfo.color};">${statusInfo.title} - BBQ Style</h2>
+                    <h2 style="color: ${statusInfo.color};">${statusInfo.title} - BBQSTYLE</h2>
                     <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
                     <p>${statusInfo.message}</p>
                     <div style="background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid ${statusInfo.color};">
@@ -3274,9 +3274,9 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
                         <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
                     </div>
                     ${status === 'delivered' ? '<p>We hope you love your purchase! Please consider leaving a review.</p>' : ''}
-                    <p>Thank you for shopping with BBQ Style!</p>
+                    <p>Thank you for shopping with BBQSTYLE!</p>
                     <hr style="margin: 30px 0;">
-                    <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                    <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
                 </div>
             `;
 
@@ -3291,7 +3291,7 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
         if (status === 'cancelled') {
             const adminEmailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #dc3545;">Order Cancelled - BBQ Style</h2>
+                    <h2 style="color: #dc3545;">Order Cancelled - BBQSTYLE</h2>
                     <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;">
                         <h3 style="margin: 0 0 15px 0;">Cancelled Order Details:</h3>
                         <p><strong>Order ID:</strong> #${orderId}</p>
@@ -3355,7 +3355,7 @@ app.put('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
         if (orderResult.email) {
             const cancelEmailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #dc3545;">Order Cancelled - BBQ Style</h2>
+                    <h2 style="color: #dc3545;">Order Cancelled - BBQSTYLE</h2>
                     <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
                     <p>Your order has been successfully cancelled as requested.</p>
                     <div style="background: #f8d7da; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;">
@@ -3365,9 +3365,9 @@ app.put('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
                         <p><strong>Cancelled By:</strong> You</p>
                     </div>
                     <p>If you paid online, your refund will be processed within 5-7 business days.</p>
-                    <p>Thank you for choosing BBQ Style!</p>
+                    <p>Thank you for choosing BBQSTYLE!</p>
                     <hr style="margin: 30px 0;">
-                    <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                    <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
                 </div>
             `;
 
@@ -3381,7 +3381,7 @@ app.put('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
         // Send cancellation notification to admin
         const adminEmailHtml = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #dc3545;">Order Cancelled by Customer - BBQ Style</h2>
+                <h2 style="color: #dc3545;">Order Cancelled by Customer - BBQSTYLE</h2>
                 <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #dc3545;">
                     <h3 style="margin: 0 0 15px 0;">Cancelled Order Details:</h3>
                     <p><strong>Order ID:</strong> #${orderId}</p>
@@ -3611,9 +3611,9 @@ app.post('/api/subscribers', async (req, res) => {
             try {
                 const welcomeEmailHtml = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #333;">Welcome to BBQ Style Newsletter!</h2>
+                        <h2 style="color: #333;">Welcome to BBQSTYLE Newsletter!</h2>
                         <p>Dear ${customer_name},</p>
-                        <p>Thank you for subscribing to our newsletter! You're now part of the BBQ Style family.</p>
+                        <p>Thank you for subscribing to our newsletter! You're now part of the BBQSTYLE family.</p>
                         <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
                             <h3 style="color: #495057;">What to expect:</h3>
                             <ul style="color: #6c757d;">
@@ -3623,15 +3623,15 @@ app.post('/api/subscribers', async (req, res) => {
                                 <li>Style tips and fashion advice</li>
                             </ul>
                         </div>
-                        <p>Stay tuned for amazing updates from BBQ Style!</p>
+                        <p>Stay tuned for amazing updates from BBQSTYLE!</p>
                         <hr style="margin: 30px 0;">
-                        <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                        <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
                     </div>
                 `;
 
                 await sendEmail(
                     email_id,
-                    'Welcome to BBQ Style Newsletter!',
+                    'Welcome to BBQSTYLE Newsletter!',
                     welcomeEmailHtml
                 );
             } catch (emailError) {
@@ -3665,7 +3665,7 @@ app.post('/api/contact', async (req, res) => {
                         ${message.replace(/\n/g, '<br>')}
                     </div>
                 </div>
-                <p style="color: #666; font-size: 12px;">This message was sent from the BBQ Style contact form.</p>
+                <p style="color: #666; font-size: 12px;">This message was sent from the BBQSTYLE contact form.</p>
             </div>
         `;
 
@@ -3678,7 +3678,7 @@ app.post('/api/contact', async (req, res) => {
         // Send confirmation email to user
         const confirmationEmailHtml = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #333;">Thank you for contacting BBQ Style!</h2>
+                <h2 style="color: #333;">Thank you for contacting BBQSTYLE!</h2>
                 <p>Dear ${name},</p>
                 <p>We have received your message and will get back to you within 24-48 hours.</p>
                 <div style="background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
@@ -3687,13 +3687,13 @@ app.post('/api/contact', async (req, res) => {
                 </div>
                 <p>Thank you for reaching out to us!</p>
                 <hr style="margin: 30px 0;">
-                <p style="color: #666; font-size: 12px;">BBQ Style - India's Premium Clothing Store</p>
+                <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
             </div>
         `;
 
         await sendEmail(
             email,
-            'Thank you for contacting BBQ Style',
+            'Thank you for contacting BBQSTYLE',
             confirmationEmailHtml
         );
 

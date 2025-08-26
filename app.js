@@ -226,7 +226,7 @@ db.getConnection((err, connection) => {
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://www.bbqstyle.in', 'https://bbqstyle.in', 'https://admin.bbqstyle.in', 'https://bbqstyle-backend.onrender.com'],
+    origin: '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -234,15 +234,15 @@ app.use(cors({
 
 // Handle preflight requests
 app.options('*', cors({
-    origin: ['http://localhost:3000', 'https://www.bbqstyle.in', 'https://bbqstyle.in', 'https://admin.bbqstyle.in', 'https://bbqstyle-backend.onrender.com'],
+    origin: '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Additional CORS middleware for admin routes
-app.use('/api/admin/*', (req, res, next) => {
-    res.header('Access-Control-Allow-Origin', req.headers.origin);
+app.use('/api/*', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');

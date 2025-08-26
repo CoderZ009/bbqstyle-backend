@@ -3845,7 +3845,7 @@ app.put('/api/admin/orders/:orderId/cancelled', isAuthenticated, async (req, res
         
         // Update order status first
         await new Promise((resolve, reject) => {
-            db.query('UPDATE orders SET status = "cancelled", cancelled_by = ?, cancel_reason = ?, cancel_comment = ? WHERE order_id = ?', 
+            db.query('UPDATE orders SET status = "cancelled", cancelled_by = ?, cancellation_reason = ?, cancellation_comments = ? WHERE order_id = ?', 
                 [cancelledBy || 'Admin', cancelReason || '', cancelComment || '', orderId], (err, result) => {
                 if (err) {
                     console.error('Database update error:', err);
@@ -4007,7 +4007,7 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
         const updateValues = [status];
         
         if (status === 'cancelled') {
-            updateFields.push('cancelled_by = ?', 'cancel_reason = ?', 'cancel_comment = ?');
+            updateFields.push('cancelled_by = ?', 'cancellation_reason = ?', 'cancellation_comments = ?');
             updateValues.push(cancelledBy || 'Admin', cancelReason || '', cancelComment || '');
         }
         

@@ -4573,24 +4573,30 @@ app.post('/api/subscribers', async (req, res) => {
             // Send welcome email to subscriber
             try {
                 const welcomeEmailHtml = `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #333;">Welcome to BBQSTYLE Newsletter!</h2>
-                        <p>Dear ${customer_name},</p>
-                        <p>Thank you for subscribing to our newsletter! You're now part of the BBQSTYLE family.</p>
-                        <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
-                            <h3 style="color: #495057;">What to expect:</h3>
-                            <ul style="color: #6c757d;">
-                                <li>Latest fashion trends and collections</li>
-                                <li>Exclusive offers and discounts</li>
-                                <li>Early access to new arrivals</li>
-                                <li>Style tips and fashion advice</li>
-                            </ul>
-                        </div>
-                        <p>Stay tuned for amazing updates from BBQSTYLE!</p>
-                        <hr style="margin: 30px 0;">
-                        <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                <div style="text-align: center; padding: 20px; background: #c3a4c6;">
+                    <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                </div>
+                <div style="padding: 30px;">
+                    <h2 style="color: #007bff; margin-bottom: 20px;">📧 BBQSTYLE Newsletter</h2>
+                    <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #007bff;">
+                        ${message.replace(/\n/g, '<br>')}
                     </div>
-                `;
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="https://bbqstyle.in" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🛒 Shop Now</a>
+                    </div>
+                </div>
+                <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                    <p style="margin: 0 0 10px 0; font-weight: 600;">Stay Connected</p>
+                    <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                    <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                    <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    <p style="margin: 10px 0 0 0; font-size: 10px; color: #999;">
+                        <a href="#" style="color: #999;">Unsubscribe</a>
+                    </p>
+                </div>
+            </div>
+        `;
 
                 await sendEmail(
                     email_id,

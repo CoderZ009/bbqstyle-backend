@@ -3838,68 +3838,81 @@ app.put('/api/admin/orders/:orderId/delivered', isAuthenticated, async (req, res
 // Update to Cancelled
 app.put('/api/admin/orders/:orderId/cancelled', isAuthenticated, async (req, res) => {
     const orderId = req.params.orderId;
-    const { cancelReason, cancelComment, cancelledBy } = req.body;
+    const { cancelReason, cancelComment, cancelledBy } = req.body || {};
     
     try {
         console.log(`Cancelling order ${orderId}`);
         
-        const orderResult = await new Promise((resolve, reject) => {
-            const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
-            db.query(query, [orderId], (err, results) => {
-                if (err) reject(err);
-                else resolve(results[0]);
-            });
-        });
-        
-        if (!orderResult) {
-            return res.status(404).json({ error: 'Order not found' });
-        }
-        
+        // Update order status first
         await new Promise((resolve, reject) => {
             db.query('UPDATE orders SET status = "cancelled", cancelled_by = ?, cancel_reason = ?, cancel_comment = ? WHERE order_id = ?', 
-                [cancelledBy || 'Admin', cancelReason || '', cancelComment || '', orderId], (err) => {
-                if (err) reject(err);
-                else resolve();
+                [cancelledBy || 'Admin', cancelReason || '', cancelComment || '', orderId], (err, result) => {
+                if (err) {
+                    console.error('Database update error:', err);
+                    reject(err);
+                } else if (result.affectedRows === 0) {
+                    reject(new Error('Order not found'));
+                } else {
+                    resolve();
+                }
             });
         });
         
-        // Send email to customer
+        // Get order details for email
+        const orderResult = await new Promise((resolve, reject) => {
+            const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o LEFT JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
+            db.query(query, [orderId], (err, results) => {
+                if (err) {
+                    console.error('Database select error:', err);
+                    reject(err);
+                } else {
+                    resolve(results[0] || null);
+                }
+            });
+        });
+        
+        // Send email if customer exists
         if (orderResult && orderResult.email) {
-            const customerEmailHtml = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
-                    <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                        <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
-                    </div>
-                    <div style="padding: 30px;">
-                        <h2 style="color: #dc3545; margin-bottom: 20px;">Order Cancelled</h2>
-                        <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
-                        <p>We regret to inform you that your order has been cancelled.</p>
-                        <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #dc3545;">
-                            <h3 style="margin: 0 0 15px 0; color: #721c24;">Cancellation Details:</h3>
-                            <p><strong>Order ID:</strong> #${orderId}</p>
-                            <p><strong>Cancelled By:</strong> ${cancelledBy || 'Admin'}</p>
-                            <p><strong>Reason:</strong> ${cancelReason || 'Not specified'}</p>
-                            ${cancelComment ? `<p><strong>Comment:</strong> ${cancelComment}</p>` : ''}
+            try {
+                const customerEmailHtml = `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                        <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                         </div>
-                        <p>If you paid online, your refund will be processed within 5-7 business days.</p>
+                        <div style="padding: 30px;">
+                            <h2 style="color: #dc3545; margin-bottom: 20px;">Order Cancelled</h2>
+                            <p>Dear ${orderResult.first_name || 'Customer'} ${orderResult.last_name || ''},</p>
+                            <p>We regret to inform you that your order has been cancelled.</p>
+                            <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #dc3545;">
+                                <h3 style="margin: 0 0 15px 0; color: #721c24;">Cancellation Details:</h3>
+                                <p><strong>Order ID:</strong> #${orderId}</p>
+                                <p><strong>Cancelled By:</strong> ${cancelledBy || 'Admin'}</p>
+                                <p><strong>Reason:</strong> ${cancelReason || 'Not specified'}</p>
+                                ${cancelComment ? `<p><strong>Comment:</strong> ${cancelComment}</p>` : ''}
+                            </div>
+                            <p>If you paid online, your refund will be processed within 5-7 business days.</p>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                            <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                            <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                            <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                            <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                        </div>
                     </div>
-                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
-                        <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
-                        <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
-                        <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
-                        <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
-                    </div>
-                </div>
-            `;
-            
-            const emailResult = await sendEmail(orderResult.email, `Order Cancelled - #${orderId}`, customerEmailHtml);
-            console.log('Cancellation email result:', emailResult);
+                `;
+                
+                await sendEmail(orderResult.email, `Order Cancelled - #${orderId}`, customerEmailHtml);
+                console.log('Cancellation email sent successfully');
+            } catch (emailError) {
+                console.error('Email sending failed:', emailError);
+                // Don't fail the API if email fails
+            }
         }
         
-        res.json({ success: true, message: 'Order cancelled and email sent' });
+        res.json({ success: true, message: 'Order cancelled successfully' });
     } catch (error) {
-        console.error('Error updating to cancelled:', error);
-        res.status(500).json({ error: 'Failed to update order status', details: error.message });
+        console.error('Error cancelling order:', error);
+        res.status(500).json({ error: 'Failed to cancel order', details: error.message });
     }
 });
 

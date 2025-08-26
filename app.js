@@ -3913,6 +3913,45 @@ app.put('/api/admin/orders/:orderId/cancelled', isAuthenticated, async (req, res
             }
         }
         
+        // Send admin notification email
+        try {
+            const adminEmailHtml = `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                        <div style="text-align: center; padding: 20px; background: rgb(248,228,253);">
+                            <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                        </div>
+                        <div style="padding: 30px;">
+                            <h2 style="color: #dc3545; margin-bottom: 20px;">Order Cancelled</h2>
+                            <p>Dear ${orderResult.first_name || 'Customer'} ${orderResult.last_name || ''},</p>
+                            <p>We regret to inform you that your order has been cancelled.</p>
+                            <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #dc3545;">
+                                <h3 style="margin: 0 0 15px 0; color: #721c24;">Cancellation Details:</h3>
+                                <p><strong>Order ID:</strong> #${orderId}</p>
+                                <p><strong>Cancelled By:</strong> ${cancelledBy === 'Customer' ? 'You' : 'Seller'}</p>
+                                <p><strong>Reason:</strong> ${cancelReason || 'Not specified'}</p>
+                                ${cancelComment ? `<p><strong>Comment:</strong> ${cancelComment}</p>` : ''}
+                            </div>
+                            <p>If you paid online, your refund will be processed within 5-7 business days.</p>
+                            <div style="background: #e7f3ff; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #007bff; text-align: center;">
+                                <p style="margin: 0 0 10px 0; color: #004085; font-weight: 600;">Cancelled by mistake?</p>
+                                <a href="https://bbqstyle.in/account?tab=orders" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🛒 Reorder Now</a>
+                            </div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                            <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                            <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                            <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                            <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                        </div>
+                    </div>
+                `;
+            
+            await sendEmail('hardevi143@gmail.com', `Order Cancelled - #${orderId}`, adminEmailHtml);
+            console.log('Admin cancellation notification sent');
+        } catch (adminEmailError) {
+            console.error('Admin email sending failed:', adminEmailError);
+        }
+        
         res.json({ success: true, message: 'Order cancelled successfully' });
     } catch (error) {
         console.error('Error cancelling order:', error);

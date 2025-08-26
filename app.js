@@ -749,8 +749,8 @@ app.post('/api/update-email', authenticateToken, async (req, res) => {
         // Send professional email confirmation
         const emailUpdateHtml = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; overflow: hidden;">
-                <div style="text-align: center; padding: 30px 20px; background: #c3a4c6;);">
-                    <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 180px; height: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+                <div style="text-align: center; padding: 20px; background: #c3a4c6;">
+                            <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                 </div>
                 
                 <div style="padding: 40px 30px;">
@@ -3590,7 +3590,9 @@ app.get('/api/orders/:orderId/items', authenticateToken, (req, res) => {
 // Get all orders for admin
 app.get('/api/admin/orders', isAuthenticated, (req, res) => {
     const query = `
-        SELECT o.*, u.first_name, u.last_name, u.email, a.full_name, a.mobile_no
+        SELECT o.*, u.first_name, u.last_name, u.email, 
+               a.full_name, a.mobile_no, a.address_line1, a.address_line2, 
+               a.city, a.state, a.pincode
         FROM orders o
         LEFT JOIN users u ON o.user_id = u.user_id
         LEFT JOIN addresses a ON o.address_id = a.address_id

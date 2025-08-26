@@ -3526,9 +3526,9 @@ app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, re
                         <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
                     <div style="padding: 30px;">
-                        <h2 style="color: #28a745; margin-bottom: 20px;">Order Confirmed! 🎉</h2>
+                        <h2 style="color: #28a745; margin-bottom: 20px;">Order Placed! 🎉</h2>
                         <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
-                        <p>Great news! Your order has been confirmed and is being prepared for packing.</p>
+                        <p>Great news! Your order has been placed successfully and is being prepared for packing.</p>
                         <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #28a745;">
                             <h3 style="margin: 0 0 15px 0; color: #155724;">Order Details:</h3>
                             <p><strong>Order ID:</strong> #${orderId}</p>
@@ -3546,7 +3546,7 @@ app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, re
                 </div>
             `;
             
-            await sendEmail(orderResult.email, `Order Confirmed - #${orderId}`, emailHtml);
+            await sendEmail(orderResult.email, `Order Placed - #${orderId}`, emailHtml);
         }
         
         res.json({ success: true, message: 'Order confirmed and email sent' });
@@ -3824,6 +3824,8 @@ app.put('/api/admin/orders/:orderId/cancelled', isAuthenticated, async (req, res
     const { cancelReason, cancelComment, cancelledBy } = req.body;
     
     try {
+        console.log(`Cancelling order ${orderId}`);
+        
         const orderResult = await new Promise((resolve, reject) => {
             const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
             db.query(query, [orderId], (err, results) => {
@@ -3831,6 +3833,10 @@ app.put('/api/admin/orders/:orderId/cancelled', isAuthenticated, async (req, res
                 else resolve(results[0]);
             });
         });
+        
+        if (!orderResult) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
         
         await new Promise((resolve, reject) => {
             db.query('UPDATE orders SET status = "cancelled", cancelled_by = ?, cancel_reason = ?, cancel_comment = ? WHERE order_id = ?', 
@@ -3869,38 +3875,14 @@ app.put('/api/admin/orders/:orderId/cancelled', isAuthenticated, async (req, res
                 </div>
             `;
             
-            await sendEmail(orderResult.email, `Order Cancelled - #${orderId}`, customerEmailHtml);
+            const emailResult = await sendEmail(orderResult.email, `Order Cancelled - #${orderId}`, customerEmailHtml);
+            console.log('Cancellation email result:', emailResult);
         }
         
-        // Send email to admin
-        const adminEmailHtml = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
-                <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                    <img src="https://bbqstyle.in/src/logo.gif" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
-                </div>
-                <div style="padding: 30px;">
-                    <h2 style="color: #dc3545; margin-bottom: 20px;">Order Cancelled - Admin Notification</h2>
-                    <div style="background: #f8d7da; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #dc3545;">
-                        <h3 style="margin: 0 0 15px 0; color: #721c24;">Cancelled Order Details:</h3>
-                        <p><strong>Order ID:</strong> #${orderId}</p>
-                        <p><strong>Customer:</strong> ${orderResult?.first_name || 'N/A'} ${orderResult?.last_name || ''}</p>
-                        <p><strong>Email:</strong> ${orderResult?.email || 'N/A'}</p>
-                        <p><strong>Total Amount:</strong> ₹${orderResult?.total_amount}</p>
-                        <p><strong>Cancelled By:</strong> ${cancelledBy || 'Admin'}</p>
-                        <p><strong>Reason:</strong> ${cancelReason || 'Not specified'}</p>
-                        ${cancelComment ? `<p><strong>Comment:</strong> ${cancelComment}</p>` : ''}
-                        <p><strong>Cancellation Date:</strong> ${new Date().toLocaleString()}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        await sendEmail('support@bbqstyle.in', `Order Cancelled - #${orderId}`, adminEmailHtml);
-        
-        res.json({ success: true, message: 'Order cancelled and emails sent' });
+        res.json({ success: true, message: 'Order cancelled and email sent' });
     } catch (error) {
         console.error('Error updating to cancelled:', error);
-        res.status(500).json({ error: 'Failed to update order status' });
+        res.status(500).json({ error: 'Failed to update order status', details: error.message });
     }
 });
 

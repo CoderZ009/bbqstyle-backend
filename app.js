@@ -173,6 +173,119 @@ app.post('/api/admin/test-smtp', isAuthenticated, async (req, res) => {
     }
 });
 
+// Auto-send status update emails when order status changes
+async function sendStatusUpdateEmail(orderId, newStatus, oldStatus) {
+    if (newStatus === oldStatus) return; // No change
+    
+    try {
+        const orderQuery = `
+            SELECT o.*, u.first_name, u.last_name, u.email 
+            FROM orders o 
+            JOIN users u ON o.user_id = u.user_id 
+            WHERE o.order_id = ?
+        `;
+        
+        const orderResult = await new Promise((resolve, reject) => {
+            db.query(orderQuery, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+
+        if (!orderResult || !orderResult.email) return;
+
+        const statusMessages = {
+            'processing': { title: 'Order Confirmed', message: 'Your order has been confirmed and is being prepared for packing.', color: '#28a745' },
+            'ready': { title: 'Order Packed', message: 'Your order has been packed and is ready for shipment.', color: '#17a2b8' },
+            'shipped': { title: 'Order Shipped', message: 'Your order is on its way to you!', color: '#6f42c1' },
+            'delivered': { title: 'Order Delivered', message: 'Your order has been delivered successfully!', color: '#28a745' },
+            'cancelled': { title: 'Order Cancelled', message: 'Your order has been cancelled.', color: '#dc3545' },
+            'out_of_stock': { title: 'Order On Hold', message: 'Some items in your order are currently out of stock. We will notify you once they are available.', color: '#ffc107' }
+        };
+
+        const statusInfo = statusMessages[newStatus];
+        if (!statusInfo) return;
+
+        let statusEmailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: ${statusInfo.color};">${statusInfo.title} - BBQSTYLE</h2>
+                <p>Dear ${orderResult?.first_name || 'Customer'} ${orderResult?.last_name || ''},</p>
+                <p>${statusInfo.message}</p>
+                <div style="background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid ${statusInfo.color};">
+                    <h3 style="margin: 0 0 10px 0;">Order Details:</h3>
+                    <p><strong>Order ID:</strong> #${orderId}</p>
+                    <p><strong>Status:</strong> ${newStatus.toUpperCase().replace('_', ' ')}</p>
+                    <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>`;
+        
+        if (newStatus === 'shipped' && orderResult.tracking_link) {
+            statusEmailHtml += `
+                    <p><strong>Carrier:</strong> ${orderResult.carrier || 'Standard Delivery'}</p>
+                    <p><strong>AWB Number:</strong> ${orderResult.tracking_id || 'N/A'}</p>
+                </div>
+                <div style="text-align: center; margin: 20px 0;">
+                    <a href="${orderResult.tracking_link}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Track Your Order</a>
+                </div>`;
+        } else if (newStatus === 'delivered') {
+            statusEmailHtml += `
+                </div>
+                <div style="text-align: center; margin: 20px 0;">
+                    <a href="https://bbqstyle.in/account?tab=orders" style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Write a Review</a>
+                </div>`;
+        } else if (newStatus === 'cancelled') {
+            statusEmailHtml += `
+                    <p><strong>Cancelled By:</strong> ${orderResult.cancelled_by || 'System'}</p>
+                    <p><strong>Reason:</strong> ${orderResult.cancel_reason || 'Not specified'}</p>
+                    ${orderResult.cancel_comment ? `<p><strong>Comment:</strong> ${orderResult.cancel_comment}</p>` : ''}
+                </div>`;
+        } else {
+            statusEmailHtml += `</div>`;
+        }
+        
+        statusEmailHtml += `
+                <p>Thank you for shopping with BBQSTYLE!</p>
+                <hr style="margin: 30px 0;">
+                <p style="color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+            </div>
+        `;
+
+        await sendEmail(
+            orderResult.email,
+            `${statusInfo.title} - Order #${orderId}`,
+            statusEmailHtml
+        );
+        
+        console.log(`Status update email sent for order ${orderId}: ${newStatus}`);
+    } catch (error) {
+        console.error('Error sending auto status email:', error);
+    }
+}
+
+// Monitor order status changes
+setInterval(async () => {
+    try {
+        // Get orders that have status changes in last 2 minutes
+        const query = `
+            SELECT order_id, status, 
+                   LAG(status) OVER (PARTITION BY order_id ORDER BY order_date) as prev_status
+            FROM orders 
+            WHERE order_date >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+               OR status != 'pending'
+        `;
+        
+        db.query(query, async (err, results) => {
+            if (err) return;
+            
+            for (const order of results) {
+                if (order.status !== order.prev_status && order.prev_status) {
+                    await sendStatusUpdateEmail(order.order_id, order.status, order.prev_status);
+                }
+            }
+        });
+    } catch (error) {
+        console.log('Status monitor error:', error.message);
+    }
+}, 60 * 1000); // Check every minute
+
 // Keep Render server awake by pinging collections endpoint every 12 minutes
 setInterval(async () => {
     try {
@@ -1768,17 +1881,91 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
             });
 
             if (userResult && userResult.email) {
+                // Get order items and address for customer email
+                const customerOrderItems = await new Promise((resolve, reject) => {
+                    const itemsQuery = `
+                        SELECT oi.*, p.title, pi.image_path
+                        FROM order_items oi
+                        JOIN products p ON oi.product_id = p.product_id
+                        LEFT JOIN product_images pi ON p.product_id = pi.product_id AND 
+                            (pi.variant_detail = oi.variant_detail OR (pi.variant_detail IS NULL AND oi.variant_detail IS NULL))
+                        WHERE oi.order_id = ?
+                        GROUP BY oi.order_item_id
+                    `;
+                    db.query(itemsQuery, [orderId], (err, results) => {
+                        if (err) reject(err);
+                        else resolve(results);
+                    });
+                });
+
+                const orderAddress = await new Promise((resolve, reject) => {
+                    db.query('SELECT * FROM addresses WHERE address_id = ?', [addressId], (err, results) => {
+                        if (err) reject(err);
+                        else resolve(results[0]);
+                    });
+                });
+
+                const customerItemsHtml = customerOrderItems.map(item => `
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #ddd;">
+                            ${item.image_path ? `<img src="https://bbqstyle.in/uploads/${item.image_path}" style="width: 60px; height: 60px; object-fit: cover;">` : ''}
+                        </td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${item.title}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${item.variant_detail || 'Standard'}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${item.quantity}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">₹${item.price}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">₹${item.price * item.quantity}</td>
+                    </tr>
+                `).join('');
+
                 const orderEmailHtml = `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
                         <h2 style="color: #333;">Order Confirmation - BBQSTYLE</h2>
                         <p>Dear ${userResult?.first_name || 'Customer'} ${userResult?.last_name || ''},</p>
                         <p>Thank you for your order! Your order has been successfully placed.</p>
+                        
                         <div style="background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;">
-                            <h3 style="margin: 0 0 10px 0;">Order Details:</h3>
+                            <h3 style="margin: 0 0 10px 0;">Order Summary:</h3>
                             <p><strong>Order ID:</strong> #${orderId}</p>
-                            <p><strong>Total Amount:</strong> ₹${totalAmount}</p>
+                            <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
                             <p><strong>Payment Mode:</strong> ${paymentMode}</p>
+                            <p><strong>Subtotal:</strong> ₹${subtotal}</p>
+                            ${discount > 0 ? `<p><strong>Discount:</strong> -₹${discount}</p>` : ''}
+                            <p><strong>Total Amount:</strong> ₹${totalAmount}</p>
                         </div>
+
+                        <h3>Order Items:</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                            <thead>
+                                <tr style="background: #f8f9fa;">
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Image</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Product</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Variant</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Qty</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Price</th>
+                                    <th style="padding: 10px; border: 1px solid #ddd;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${customerItemsHtml}
+                            </tbody>
+                        </table>
+
+                        ${orderAddress ? `
+                        <div style="background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px;">
+                            <h3 style="margin: 0 0 10px 0;">Delivery Address:</h3>
+                            <p><strong>${orderAddress.full_name}</strong></p>
+                            <p>${orderAddress.address_line1}</p>
+                            ${orderAddress.address_line2 ? `<p>${orderAddress.address_line2}</p>` : ''}
+                            <p>${orderAddress.city}, ${orderAddress.state} - ${orderAddress.pincode}</p>
+                            <p>Phone: ${orderAddress.mobile_no}</p>
+                        </div>
+                        ` : ''}
+
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="https://bbqstyle.in/account?tab=orders" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Download Invoice & Track Order</a>
+                        </div>
+
                         <p>We will process your order and send you tracking details once it's shipped.</p>
                         <p>Thank you for shopping with BBQSTYLE!</p>
                         <hr style="margin: 30px 0;">
@@ -1804,10 +1991,40 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
             });
         });
 
+        // Get order items for admin email
+        const orderItems = await new Promise((resolve, reject) => {
+            const itemsQuery = `
+                SELECT oi.*, p.title, pi.image_path
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.product_id
+                LEFT JOIN product_images pi ON p.product_id = pi.product_id AND 
+                    (pi.variant_detail = oi.variant_detail OR (pi.variant_detail IS NULL AND oi.variant_detail IS NULL))
+                WHERE oi.order_id = ?
+                GROUP BY oi.order_item_id
+            `;
+            db.query(itemsQuery, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results);
+            });
+        });
+
         // Send order received notification to admin
         try {
+            const itemsHtml = orderItems.map(item => `
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">
+                        ${item.image_path ? `<img src="https://bbqstyle.in/uploads/${item.image_path}" style="width: 50px; height: 50px; object-fit: cover;">` : ''}
+                    </td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${item.title}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${item.variant_detail || 'Standard'}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${item.quantity}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">₹${item.price}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">₹${item.price * item.quantity}</td>
+                </tr>
+            `).join('');
+
             const adminEmailHtml = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
                     <h2 style="color: #007bff;">New Order Received - BBQSTYLE</h2>
                     <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
                         <h3 style="margin: 0 0 15px 0;">Order Details:</h3>
@@ -1818,6 +2035,22 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
                         <p><strong>Payment Mode:</strong> ${paymentMode}</p>
                         <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
                     </div>
+                    <h3>Order Items:</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                        <thead>
+                            <tr style="background: #f8f9fa;">
+                                <th style="padding: 10px; border: 1px solid #ddd;">Image</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">Product</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">Variant</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">Qty</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">Price</th>
+                                <th style="padding: 10px; border: 1px solid #ddd;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
                     <p>Please process this order in the admin panel.</p>
                 </div>
             `;
@@ -3225,10 +3458,29 @@ app.get('/api/orders/:orderId/items', authenticateToken, (req, res) => {
     });
 });
 
+// Get all orders for admin
+app.get('/api/admin/orders', isAuthenticated, (req, res) => {
+    const query = `
+        SELECT o.*, u.first_name, u.last_name, u.email, a.full_name, a.mobile_no
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.user_id
+        LEFT JOIN addresses a ON o.address_id = a.address_id
+        ORDER BY o.order_date DESC
+    `;
+    
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('Database error fetching orders:', err);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        res.json(results);
+    });
+});
+
 // Update order status with email notifications
 app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) => {
     const orderId = req.params.orderId;
-    const { status, cancelledBy } = req.body;
+    const { status, cancelledBy, cancelReason, cancelComment, trackingId, trackingLink, carrier } = req.body;
     
     if (!status) {
         return res.status(400).json({ error: 'Status is required' });
@@ -3254,9 +3506,24 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
             return res.status(404).json({ error: 'Order not found' });
         }
 
-        // Update order status
+        // Update order status with additional fields
+        const updateFields = ['status = ?'];
+        const updateValues = [status];
+        
+        if (status === 'cancelled') {
+            updateFields.push('cancelled_by = ?', 'cancel_reason = ?', 'cancel_comment = ?');
+            updateValues.push(cancelledBy || 'Admin', cancelReason || '', cancelComment || '');
+        }
+        
+        if (status === 'shipped') {
+            updateFields.push('tracking_id = ?', 'tracking_link = ?', 'carrier = ?');
+            updateValues.push(trackingId || '', trackingLink || '', carrier || '');
+        }
+        
+        updateValues.push(orderId);
+        
         await new Promise((resolve, reject) => {
-            db.query('UPDATE orders SET status = ? WHERE order_id = ?', [status, orderId], (err) => {
+            db.query(`UPDATE orders SET ${updateFields.join(', ')} WHERE order_id = ?`, updateValues, (err) => {
                 if (err) reject(err);
                 else resolve();
             });
@@ -3266,12 +3533,12 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
         if (orderResult.email) {
             console.log('Sending status update email to:', orderResult.email);
             const statusMessages = {
-                'confirmed': { title: 'Order Confirmed', message: 'Your order has been confirmed and is being prepared.', color: '#28a745' },
-                'processing': { title: 'Order Processing', message: 'Your order is currently being processed.', color: '#ffc107' },
-                'ready': { title: 'Order Ready', message: 'Your order is ready and will be shipped soon.', color: '#17a2b8' },
-                'shipped': { title: 'Order Shipped', message: 'Your order is out for delivery. You will receive it soon!', color: '#6f42c1' },
-                'delivered': { title: 'Order Delivered', message: 'Your order has been delivered. Please share your review!', color: '#28a745' },
-                'cancelled': { title: 'Order Cancelled', message: `Your order has been cancelled${cancelledBy ? ` by ${cancelledBy}` : ''}.`, color: '#dc3545' }
+                'processing': { title: 'Order Confirmed', message: 'Your order has been confirmed and is being prepared for packing.', color: '#28a745' },
+                'ready': { title: 'Order Packed', message: 'Your order has been packed and is ready for shipment.', color: '#17a2b8' },
+                'shipped': { title: 'Order Shipped', message: 'Your order is on its way to you!', color: '#6f42c1' },
+                'delivered': { title: 'Order Delivered', message: 'Your order has been delivered successfully!', color: '#28a745' },
+                'cancelled': { title: 'Order Cancelled', message: `Your order has been cancelled${cancelledBy ? ` by ${cancelledBy}` : ''}.`, color: '#dc3545' },
+                'out_of_stock': { title: 'Order On Hold', message: 'Some items in your order are currently out of stock. We will notify you once they are available.', color: '#ffc107' }
             };
 
             const statusInfo = statusMessages[status] || { title: 'Order Status Updated', message: `Your order status has been updated to: ${status}`, color: '#6c757d' };
@@ -3342,7 +3609,7 @@ app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) =
             }
         }
 
-        res.json({ success: true, message: 'Order status updated successfully' });
+        res.json({ success: true, message: 'Order status updated and email sent successfully' });
     } catch (error) {
         console.error('Error updating order status:', error);
         res.status(500).json({ error: 'Failed to update order status' });

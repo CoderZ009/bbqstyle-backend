@@ -2013,7 +2013,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
             const adminEmailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
-                        <img src="https://bbqstyle.in/src/logot.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                        <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
                     </div>
                     <div style="padding: 30px;">
                         <h2 style="color: #007bff; margin-bottom: 20px;">🎉 New Order Received!</h2>

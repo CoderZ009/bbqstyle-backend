@@ -1796,6 +1796,14 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
             console.error('Error sending order confirmation email:', emailError);
         }
 
+        // Get user details for admin notification
+        const userResult = await new Promise((resolve, reject) => {
+            db.query('SELECT first_name, last_name, email FROM users WHERE user_id = ?', [userId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+
         // Send order received notification to admin
         try {
             const adminEmailHtml = `

@@ -3994,7 +3994,7 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
             });
         });
         
-        if (orderResult && orderResult.email && orderResult.status !== 'shipped') {
+        if (orderResult && orderResult.email) {
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
@@ -4063,7 +4063,7 @@ app.put('/api/admin/orders/:orderId/out-for-delivery', isAuthenticated, async (r
             });
         });
         
-        if (orderResult && orderResult.email && orderResult.status !== 'out_for_delivery') {
+        if (orderResult && orderResult.email) {
             const isCOD = orderResult.payment_mode === 'COD';
             const paymentSection = isCOD ? 
                 `<div style="background: #fff3cd; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #ffc107; text-align: center;">
@@ -4137,7 +4137,7 @@ app.put('/api/admin/orders/:orderId/delivered', isAuthenticated, async (req, res
             });
         });
         
-        if (orderResult && orderResult.email && orderResult.status !== 'delivered') {
+        if (orderResult && orderResult.email) {
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">

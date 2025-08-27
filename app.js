@@ -3994,7 +3994,7 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
             });
         });
         
-        if (orderResult && orderResult.email) {
+        if (orderResult && orderResult.email && orderResult.status !== 'shipped') {
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
@@ -4008,12 +4008,12 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
                             <h3 style="margin: 0 0 15px 0; color: #495057;">Shipping Details:</h3>
                             <p><strong>Order ID:</strong> #${orderId}</p>
                             <p><strong>Status:</strong> SHIPPED</p>
-                            <p><strong>Carrier:</strong> ${carrier || 'Standard Delivery'}</p>
-                            <p><strong>AWB Number:</strong> ${trackingId || 'Will be updated soon'}</p>
+                            <p><strong>Carrier:</strong> ${orderResult.carrier || 'Standard Delivery'}</p>
+                            <p><strong>AWB Number:</strong> ${orderResult.tracking_id || 'Will be updated soon'}</p>
                         </div>
-                        ${trackingLink ? `
+                        ${orderResult.tracking_link ? `
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="${trackingLink}" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🔍 Track Your Order</a>
+                            <a href="${orderResult.tracking_link}" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🔍 Track Your Order</a>
                         </div>
                         ` : ''}
                         <p>You'll receive your order soon. Thank you for your patience!</p>

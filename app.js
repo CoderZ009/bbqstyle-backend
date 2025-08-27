@@ -3612,8 +3612,8 @@ app.post('/api/orders/:orderId/cancel', authenticateToken, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
         
-        // Check if order can be cancelled (only pending and processing orders)
-        if (!['pending', 'processing'].includes(orderResult.status)) {
+        // Check if order can be cancelled (only pending orders)
+        if (orderResult.status !== 'pending') {
             return res.status(400).json({ 
                 success: false, 
                 message: 'Order cannot be cancelled at this stage' 
@@ -3988,8 +3988,7 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
         });
         
         await new Promise((resolve, reject) => {
-            db.query('UPDATE orders SET status = "shipped", tracking_id = ?, tracking_link = ?, carrier = ? WHERE order_id = ?', 
-                [trackingId || '', trackingLink || '', carrier || '', orderId], (err) => {
+            db.query('UPDATE orders SET status = "shipped" WHERE order_id = ?', [orderId], (err) => {
                 if (err) reject(err);
                 else resolve();
             });
@@ -7914,4 +7913,86 @@ app.post('/api/verify-otp', async (req, res) => {
         console.error('Error verifying OTP:', error);
         res.status(500).json({ success: false, message: 'Failed to verify OTP' });
     }
+});
+// Add tracking to order endpoint with email notification
+app.post('/api/admin/orders/:orderId/tracking', isAuthenticated, async (req, res) => {
+    const orderId = req.params.orderId;
+    const { trackingId, trackingLink, carrier, isEdit } = req.body;
+
+    if (!trackingId) {
+        return res.status(400).json({ error: 'Tracking ID is required' });
+    }
+
+    try {
+        const orderResult = await new Promise((resolve, reject) => {
+            const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
+            db.query(query, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+
+        await new Promise((resolve, reject) => {
+            db.query('UPDATE orders SET tracking_id = ?, tracking_link = ?, carrier = ? WHERE order_id = ?',
+                [trackingId, trackingLink || '', carrier || '', orderId], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+        });
+
+        if (orderResult && orderResult.email) {
+            const emailTitle = isEdit ? 'Tracking Information Updated' : 'Tracking Information Added';
+            const trackingEmailHtml = `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; padding: 20px; background: #c3a4c6;">
+                        <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                    </div>
+                    <div style="padding: 30px;">
+                        <h2 style="color: #007bff; margin-bottom: 20px;">${emailTitle} 📦</h2>
+                        <p>Dear ${orderResult.first_name} ${orderResult.last_name},</p>
+                        <p>${isEdit ? 'Your tracking information has been updated.' : 'Tracking information has been added to your order.'}</p>
+                        <div style="background: #e7f3ff; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #007bff;">
+                            <h3 style="margin: 0 0 15px 0; color: #004085;">Tracking Details:</h3>
+                            <p><strong>Order ID:</strong> #${orderId}</p>
+                            <p><strong>Tracking ID:</strong> ${trackingId}</p>
+                            <p><strong>Carrier:</strong> ${carrier || 'Standard Delivery'}</p>
+                            ${trackingLink ? `<p><strong>Track:</strong> <a href="${trackingLink}" style="color: #007bff;">Click here to track</a></p>` : ''}
+                        </div>
+                        ${trackingLink ? `<div style="text-align: center; margin: 30px 0;"><a href="${trackingLink}" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🔍 Track Your Order</a></div>` : ''}
+                        <p>Thank you for shopping with BBQSTYLE!</p>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eee;">
+                        <p style="margin: 0 0 10px 0; font-weight: 600;">Need Help?</p>
+                        <p style="margin: 5px 0;">📧 <a href="mailto:support@bbqstyle.in" style="color: #007bff;">support@bbqstyle.in</a></p>
+                        <p style="margin: 5px 0;">📞 <a href="tel:+918901551059" style="color: #007bff;">+91 8901551059</a></p>
+                        <p style="margin: 15px 0 0 0; color: #666; font-size: 12px;">BBQSTYLE - India's Premium Clothing Store</p>
+                    </div>
+                </div>
+            `;
+
+            await sendEmail(orderResult.email, `${emailTitle} - Order #${orderId}`, trackingEmailHtml);
+        }
+
+        res.json({ success: true, message: 'Tracking information saved and email sent' });
+    } catch (error) {
+        console.error('Error adding tracking:', error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+// Update order endpoint
+app.put('/api/admin/orders/:orderId', isAuthenticated, (req, res) => {
+    const orderId = req.params.orderId;
+    const { total_amount, payment_mode, status } = req.body;
+
+    db.query('UPDATE orders SET total_amount = ?, payment_mode = ?, status = ? WHERE order_id = ?',
+        [total_amount, payment_mode, status, orderId], (err, result) => {
+            if (err) {
+                console.error('Error updating order:', err);
+                return res.status(500).json({ error: 'Database error' });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ error: 'Order not found' });
+            }
+            res.json({ success: true, message: 'Order updated successfully' });
+        });
 });

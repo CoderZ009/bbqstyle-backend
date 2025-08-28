@@ -3855,22 +3855,43 @@ app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, re
     const orderId = req.params.orderId;
     
     try {
+        console.log(`Processing order ${orderId} - fetching order details`);
+        
         const orderResult = await new Promise((resolve, reject) => {
             const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
             db.query(query, [orderId], (err, results) => {
-                if (err) reject(err);
-                else resolve(results[0]);
+                if (err) {
+                    console.error('Error fetching order details:', err);
+                    reject(err);
+                } else {
+                    console.log('Order details fetched:', results[0] ? 'Found' : 'Not found');
+                    resolve(results[0]);
+                }
             });
         });
         
+        if (!orderResult) {
+            console.log('Order not found for ID:', orderId);
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        
+        console.log(`Updating order ${orderId} status to processing`);
         await new Promise((resolve, reject) => {
-            db.query('UPDATE orders SET status = "processing" WHERE order_id = ?', [orderId], (err) => {
-                if (err) reject(err);
-                else resolve();
+            db.query('UPDATE orders SET status = "processing" WHERE order_id = ?', [orderId], (err, result) => {
+                if (err) {
+                    console.error('Error updating order status:', err);
+                    reject(err);
+                } else {
+                    console.log('Order status updated, affected rows:', result.affectedRows);
+                    resolve();
+                }
             });
         });
         
+        console.log('Checking if customer has email:', orderResult.email);
         if (orderResult && orderResult.email) {
+            console.log(`Sending confirmation email to: ${orderResult.email}`);
+            
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
@@ -3906,7 +3927,20 @@ app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, re
                 </div>
             `;
             
-            await sendEmail(orderResult.email, `Order Confirmed - #${orderId}`, emailHtml);
+            try {
+                const emailResult = await sendEmail(orderResult.email, `Order Confirmed - #${orderId}`, emailHtml);
+                console.log('Email send result:', emailResult);
+                
+                if (emailResult.success) {
+                    console.log('Confirmation email sent successfully');
+                } else {
+                    console.error('Failed to send confirmation email:', emailResult.error);
+                }
+            } catch (emailError) {
+                console.error('Error sending confirmation email:', emailError);
+            }
+        } else {
+            console.log('No email address found for customer, skipping email');
         }
         
         res.json({ success: true, message: 'Order confirmed and email sent' });
@@ -3921,22 +3955,43 @@ app.put('/api/admin/orders/:orderId/ready', isAuthenticated, async (req, res) =>
     const orderId = req.params.orderId;
     
     try {
+        console.log(`Marking order ${orderId} as ready - fetching order details`);
+        
         const orderResult = await new Promise((resolve, reject) => {
             const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
             db.query(query, [orderId], (err, results) => {
-                if (err) reject(err);
-                else resolve(results[0]);
+                if (err) {
+                    console.error('Error fetching order details:', err);
+                    reject(err);
+                } else {
+                    console.log('Order details fetched:', results[0] ? 'Found' : 'Not found');
+                    resolve(results[0]);
+                }
             });
         });
         
+        if (!orderResult) {
+            console.log('Order not found for ID:', orderId);
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        
+        console.log(`Updating order ${orderId} status to ready`);
         await new Promise((resolve, reject) => {
-            db.query('UPDATE orders SET status = "ready" WHERE order_id = ?', [orderId], (err) => {
-                if (err) reject(err);
-                else resolve();
+            db.query('UPDATE orders SET status = "ready" WHERE order_id = ?', [orderId], (err, result) => {
+                if (err) {
+                    console.error('Error updating order status:', err);
+                    reject(err);
+                } else {
+                    console.log('Order status updated to ready, affected rows:', result.affectedRows);
+                    resolve();
+                }
             });
         });
         
+        console.log('Checking if customer has email:', orderResult.email);
         if (orderResult && orderResult.email) {
+            console.log(`Sending packed email to: ${orderResult.email}`);
+            
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
@@ -3963,7 +4018,20 @@ app.put('/api/admin/orders/:orderId/ready', isAuthenticated, async (req, res) =>
                 </div>
             `;
             
-            await sendEmail(orderResult.email, `Order Packed - #${orderId}`, emailHtml);
+            try {
+                const emailResult = await sendEmail(orderResult.email, `Order Packed - #${orderId}`, emailHtml);
+                console.log('Packed email send result:', emailResult);
+                
+                if (emailResult.success) {
+                    console.log('Packed email sent successfully');
+                } else {
+                    console.error('Failed to send packed email:', emailResult.error);
+                }
+            } catch (emailError) {
+                console.error('Error sending packed email:', emailError);
+            }
+        } else {
+            console.log('No email address found for customer, skipping email');
         }
         
         res.json({ success: true, message: 'Order marked as ready and email sent' });
@@ -3979,22 +4047,44 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
     const { trackingId, trackingLink, carrier } = req.body;
     
     try {
+        console.log(`Marking order ${orderId} as shipped - fetching order details`);
+        
         const orderResult = await new Promise((resolve, reject) => {
             const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
             db.query(query, [orderId], (err, results) => {
-                if (err) reject(err);
-                else resolve(results[0]);
+                if (err) {
+                    console.error('Error fetching order details:', err);
+                    reject(err);
+                } else {
+                    console.log('Order details fetched:', results[0] ? 'Found' : 'Not found');
+                    resolve(results[0]);
+                }
             });
         });
         
+        if (!orderResult) {
+            console.log('Order not found for ID:', orderId);
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        
+        console.log(`Updating order ${orderId} status to shipped with tracking info`);
         await new Promise((resolve, reject) => {
-            db.query('UPDATE orders SET status = "shipped" WHERE order_id = ?', [orderId], (err) => {
-                if (err) reject(err);
-                else resolve();
+            db.query('UPDATE orders SET status = "shipped", tracking_id = ?, tracking_link = ?, carrier = ? WHERE order_id = ?', 
+                [trackingId || null, trackingLink || null, carrier || null, orderId], (err, result) => {
+                if (err) {
+                    console.error('Error updating order status:', err);
+                    reject(err);
+                } else {
+                    console.log('Order status updated to shipped, affected rows:', result.affectedRows);
+                    resolve();
+                }
             });
         });
         
+        console.log('Checking if customer has email:', orderResult.email);
         if (orderResult && orderResult.email) {
+            console.log(`Sending shipped email to: ${orderResult.email}`);
+            
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
@@ -4008,12 +4098,12 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
                             <h3 style="margin: 0 0 15px 0; color: #495057;">Shipping Details:</h3>
                             <p><strong>Order ID:</strong> #${orderId}</p>
                             <p><strong>Status:</strong> SHIPPED</p>
-                            <p><strong>Carrier:</strong> ${orderResult.carrier || 'Standard Delivery'}</p>
-                            <p><strong>AWB Number:</strong> ${orderResult.tracking_id || 'Will be updated soon'}</p>
+                            <p><strong>Carrier:</strong> ${carrier || 'Standard Delivery'}</p>
+                            <p><strong>AWB Number:</strong> ${trackingId || 'Will be updated soon'}</p>
                         </div>
-                        ${orderResult.tracking_link ? `
+                        ${trackingLink ? `
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="${orderResult.tracking_link}" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🔍 Track Your Order</a>
+                            <a href="${trackingLink}" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🔍 Track Your Order</a>
                         </div>
                         ` : ''}
                         <p>You'll receive your order soon. Thank you for your patience!</p>
@@ -4027,7 +4117,20 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
                 </div>
             `;
             
-            await sendEmail(orderResult.email, `Order Shipped - #${orderId}`, emailHtml);
+            try {
+                const emailResult = await sendEmail(orderResult.email, `Order Shipped - #${orderId}`, emailHtml);
+                console.log('Shipped email send result:', emailResult);
+                
+                if (emailResult.success) {
+                    console.log('Shipped email sent successfully');
+                } else {
+                    console.error('Failed to send shipped email:', emailResult.error);
+                }
+            } catch (emailError) {
+                console.error('Error sending shipped email:', emailError);
+            }
+        } else {
+            console.log('No email address found for customer, skipping email');
         }
         
         res.json({ success: true, message: 'Order marked as shipped and email sent' });
@@ -4047,23 +4150,38 @@ app.put('/api/admin/orders/:orderId/out-for-delivery', isAuthenticated, async (r
         const orderResult = await new Promise((resolve, reject) => {
             const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
             db.query(query, [orderId], (err, results) => {
-                if (err) reject(err);
-                else resolve(results[0]);
+                if (err) {
+                    console.error('Error fetching order details:', err);
+                    reject(err);
+                } else {
+                    console.log('Order details fetched:', results[0] ? 'Found' : 'Not found');
+                    resolve(results[0]);
+                }
             });
         });
         
         if (!orderResult) {
+            console.log('Order not found for ID:', orderId);
             return res.status(404).json({ error: 'Order not found' });
         }
         
+        console.log(`Updating order ${orderId} status to out for delivery`);
         await new Promise((resolve, reject) => {
-            db.query('UPDATE orders SET status = "out_for_delivery" WHERE order_id = ?', [orderId], (err) => {
-                if (err) reject(err);
-                else resolve();
+            db.query('UPDATE orders SET status = "out_for_delivery" WHERE order_id = ?', [orderId], (err, result) => {
+                if (err) {
+                    console.error('Error updating order status:', err);
+                    reject(err);
+                } else {
+                    console.log('Order status updated to out for delivery, affected rows:', result.affectedRows);
+                    resolve();
+                }
             });
         });
         
+        console.log('Checking if customer has email:', orderResult.email);
         if (orderResult && orderResult.email) {
+            console.log(`Sending out for delivery email to: ${orderResult.email}`);
+            
             const isCOD = orderResult.payment_mode === 'COD';
             const paymentSection = isCOD ? 
                 `<div style="background: #fff3cd; padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #ffc107; text-align: center;">
@@ -4106,8 +4224,20 @@ app.put('/api/admin/orders/:orderId/out-for-delivery', isAuthenticated, async (r
                 </div>
             `;
             
-            const emailResult = await sendEmail(orderResult.email, `Out for Delivery - #${orderId}`, emailHtml);
-            console.log('Out for delivery email result:', emailResult);
+            try {
+                const emailResult = await sendEmail(orderResult.email, `Out for Delivery - #${orderId}`, emailHtml);
+                console.log('Out for delivery email send result:', emailResult);
+                
+                if (emailResult.success) {
+                    console.log('Out for delivery email sent successfully');
+                } else {
+                    console.error('Failed to send out for delivery email:', emailResult.error);
+                }
+            } catch (emailError) {
+                console.error('Error sending out for delivery email:', emailError);
+            }
+        } else {
+            console.log('No email address found for customer, skipping email');
         }
         
         res.json({ success: true, message: 'Order marked as out for delivery and email sent' });
@@ -4122,22 +4252,43 @@ app.put('/api/admin/orders/:orderId/delivered', isAuthenticated, async (req, res
     const orderId = req.params.orderId;
     
     try {
+        console.log(`Marking order ${orderId} as delivered - fetching order details`);
+        
         const orderResult = await new Promise((resolve, reject) => {
             const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
             db.query(query, [orderId], (err, results) => {
-                if (err) reject(err);
-                else resolve(results[0]);
+                if (err) {
+                    console.error('Error fetching order details:', err);
+                    reject(err);
+                } else {
+                    console.log('Order details fetched:', results[0] ? 'Found' : 'Not found');
+                    resolve(results[0]);
+                }
             });
         });
         
+        if (!orderResult) {
+            console.log('Order not found for ID:', orderId);
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        
+        console.log(`Updating order ${orderId} status to delivered`);
         await new Promise((resolve, reject) => {
-            db.query('UPDATE orders SET status = "delivered" WHERE order_id = ?', [orderId], (err) => {
-                if (err) reject(err);
-                else resolve();
+            db.query('UPDATE orders SET status = "delivered" WHERE order_id = ?', [orderId], (err, result) => {
+                if (err) {
+                    console.error('Error updating order status:', err);
+                    reject(err);
+                } else {
+                    console.log('Order status updated to delivered, affected rows:', result.affectedRows);
+                    resolve();
+                }
             });
         });
         
+        console.log('Checking if customer has email:', orderResult.email);
         if (orderResult && orderResult.email) {
+            console.log(`Sending delivered email to: ${orderResult.email}`);
+            
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
@@ -4167,7 +4318,20 @@ app.put('/api/admin/orders/:orderId/delivered', isAuthenticated, async (req, res
                 </div>
             `;
             
-            await sendEmail(orderResult.email, `Order Delivered - #${orderId}`, emailHtml);
+            try {
+                const emailResult = await sendEmail(orderResult.email, `Order Delivered - #${orderId}`, emailHtml);
+                console.log('Delivered email send result:', emailResult);
+                
+                if (emailResult.success) {
+                    console.log('Delivered email sent successfully');
+                } else {
+                    console.error('Failed to send delivered email:', emailResult.error);
+                }
+            } catch (emailError) {
+                console.error('Error sending delivered email:', emailError);
+            }
+        } else {
+            console.log('No email address found for customer, skipping email');
         }
         
         res.json({ success: true, message: 'Order marked as delivered and email sent' });

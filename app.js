@@ -347,30 +347,32 @@ db.getConnection((err, connection) => {
 
 // Middleware
 app.use(cors({
-    origin: ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000'],
+    origin: ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000', 'https://www.bbqstyle.in'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
 
 // Handle preflight requests
 app.options('*', cors({
-    origin: ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000'],
+    origin: ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000', 'https://www.bbqstyle.in'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
 
 // Additional CORS middleware for admin routes
 app.use('/api/*', (req, res, next) => {
-    const allowedOrigins = ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000'];
+    const allowedOrigins = ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000', 'https://www.bbqstyle.in'];
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
         res.header('Access-Control-Allow-Origin', origin);
+    } else {
+        res.header('Access-Control-Allow-Origin', '*');
     }
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }
@@ -379,41 +381,28 @@ app.use('/api/*', (req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-// Serve static files with CORS headers for admin subdomain
-app.use('/uploads', (req, res, next) => {
+// Comprehensive CORS middleware for all static files
+app.use((req, res, next) => {
+    // Set CORS headers for all requests
     res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    
     next();
-}, express.static(path.join(__dirname, 'public', 'uploads')));
+});
 
-app.use('/src', (req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    next();
-}, express.static(path.join(__dirname, 'src')));
-
-app.use('/src/categories', (req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    next();
-}, express.static(path.join(__dirname, 'src', 'categories')));
-
-app.use('/src/collections', (req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    next();
-}, express.static(path.join(__dirname, 'src', 'collections')));
-
-app.use('/src/slides', (req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    next();
-}, express.static(path.join(__dirname, 'src', 'slides')));
+// Serve static files with CORS headers
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+app.use('/src', express.static(path.join(__dirname, 'src')));
+app.use('/src/categories', express.static(path.join(__dirname, 'src', 'categories')));
+app.use('/src/collections', express.static(path.join(__dirname, 'src', 'collections')));
+app.use('/src/slides', express.static(path.join(__dirname, 'src', 'slides')));
 
 // Serve favicon with proper headers
 app.get('/favicon.ico', (req, res) => {
@@ -433,15 +422,7 @@ app.get('/admin*', (req, res, next) => {
     next();
 });
 
-// Add CORS headers for all static files
-app.use((req, res, next) => {
-    if (req.path.match(/\.(png|jpg|jpeg|gif|ico|svg)$/)) {
-        res.header('Access-Control-Allow-Origin', '*');
-        res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    }
-    next();
-});
+
 
 app.use(express.static(path.join(__dirname, 'public')));
 

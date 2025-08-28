@@ -432,6 +432,7 @@ app.use('/src/slides', (req, res, next) => {
 
 // Serve favicon with proper headers
 app.get('/favicon.ico', (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
     res.sendFile(path.join(__dirname, 'src', 'favicon.ico'), (err) => {
         if (err) {
             // If favicon doesn't exist, send a default response
@@ -447,7 +448,23 @@ app.get('/admin*', (req, res, next) => {
     next();
 });
 
+// Add CORS headers for all static files
+app.use((req, res, next) => {
+    if (req.path.match(/\.(png|jpg|jpeg|gif|ico|svg)$/)) {
+        res.header('Access-Control-Allow-Origin', '*');
+        res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    }
+    next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve logos.png with CORS headers
+app.get('/logos.png', (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.sendFile(path.join(__dirname, 'logos.png'));
+});
 
 
 

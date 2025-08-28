@@ -1220,15 +1220,12 @@ app.get('/api/user-profile', authenticateToken, (req, res) => {
 // Configure multer for signature image upload
 const signatureStorage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, 'public', 'uploads', 'signatures');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
+        cb(null, tempDir);
     },
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'signature-' + uniqueSuffix + path.extname(file.originalname));
+        // Template ID will be determined later, use temp name for now
+        const tempFilename = 'temp-signature-' + Date.now() + '.png';
+        cb(null, tempFilename);
     }
 });
 
@@ -1263,7 +1260,7 @@ app.get('/api/admin/invoice-template', isAuthenticated, (req, res) => {
 });
 
 // Save/Update invoice template
-app.post('/api/admin/invoice-template', isAuthenticated, signatureUpload.single('signature_image'), (req, res) => {
+app.post('/api/admin/invoice-template', isAuthenticated, signatureUpload.single('signature_image'), async (req, res) => {
     const {
         company_name,
         invoice_prefix,
@@ -1276,19 +1273,38 @@ app.post('/api/admin/invoice-template', isAuthenticated, signatureUpload.single(
         invoice_theme
     } = req.body;
 
-    let signature_image = null;
-    if (req.file) {
-        signature_image = '/uploads/signatures/' + req.file.filename;
-    }
-
-    // Check if template exists
-    db.query('SELECT id FROM invoice_template LIMIT 1', (err, existing) => {
-        if (err) {
-            console.error('Error checking existing template:', err);
-            return res.status(500).json({ success: false, error: 'Database error' });
-        }
+    try {
+        // Check if template exists
+        const existing = await new Promise((resolve, reject) => {
+            db.query('SELECT id FROM invoice_template LIMIT 1', (err, results) => {
+                if (err) reject(err);
+                else resolve(results);
+            });
+        });
+        
+        let templateId;
+        let signature_image = null;
         
         if (existing.length > 0) {
+            templateId = existing[0].id;
+            
+            // Handle signature image upload
+            if (req.file) {
+                const signatureFilename = `sign${templateId}.png`;
+                const localPath = path.join(tempDir, req.file.filename);
+                const remotePath = `/src/${signatureFilename}`;
+                
+                // Upload to Bluehost (replaces existing file)
+                await uploadToBluehost(localPath, remotePath);
+                
+                // Delete local temp file
+                fs.unlink(localPath, (err) => {
+                    if (err) console.error('Error deleting temp signature file:', err);
+                });
+                
+                signature_image = signatureFilename;
+            }
+            
             // Update existing template
             let updateQuery = `
                 UPDATE invoice_template SET 
@@ -1313,36 +1329,69 @@ app.post('/api/admin/invoice-template', isAuthenticated, signatureUpload.single(
             }
             
             updateQuery += ' WHERE id = ?';
-            updateParams.push(existing[0].id);
+            updateParams.push(templateId);
             
-            db.query(updateQuery, updateParams, (updateErr) => {
-                if (updateErr) {
-                    console.error('Error updating invoice template:', updateErr);
-                    return res.status(500).json({ success: false, error: 'Database error' });
-                }
-                res.json({ success: true, message: 'Template updated successfully' });
+            await new Promise((resolve, reject) => {
+                db.query(updateQuery, updateParams, (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
             });
+            
+            res.json({ success: true, message: 'Template updated successfully' });
         } else {
-            // Insert new template
-            db.query(`
-                INSERT INTO invoice_template (
+            // Insert new template first to get ID
+            const insertResult = await new Promise((resolve, reject) => {
+                db.query(`
+                    INSERT INTO invoice_template (
+                        company_name, invoice_prefix, company_email, company_phone,
+                        company_gstin, company_address, invoice_footer, invoice_terms,
+                        invoice_theme
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, [
                     company_name, invoice_prefix, company_email, company_phone,
                     company_gstin, company_address, invoice_footer, invoice_terms,
-                    invoice_theme, signature_image
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                company_name, invoice_prefix, company_email, company_phone,
-                company_gstin, company_address, invoice_footer, invoice_terms,
-                invoice_theme, signature_image
-            ], (insertErr) => {
-                if (insertErr) {
-                    console.error('Error inserting invoice template:', insertErr);
-                    return res.status(500).json({ success: false, error: 'Database error' });
-                }
-                res.json({ success: true, message: 'Template created successfully' });
+                    invoice_theme
+                ], (err, result) => {
+                    if (err) reject(err);
+                    else resolve(result);
+                });
             });
+            
+            templateId = insertResult.insertId;
+            
+            // Handle signature image upload
+            if (req.file) {
+                const signatureFilename = `sign${templateId}.png`;
+                const localPath = path.join(tempDir, req.file.filename);
+                const remotePath = `/src/${signatureFilename}`;
+                
+                // Upload to Bluehost
+                await uploadToBluehost(localPath, remotePath);
+                
+                // Delete local temp file
+                fs.unlink(localPath, (err) => {
+                    if (err) console.error('Error deleting temp signature file:', err);
+                });
+                
+                signature_image = signatureFilename;
+                
+                // Update template with signature filename
+                await new Promise((resolve, reject) => {
+                    db.query('UPDATE invoice_template SET signature_image = ? WHERE id = ?', 
+                        [signature_image, templateId], (err) => {
+                            if (err) reject(err);
+                            else resolve();
+                        });
+                });
+            }
+            
+            res.json({ success: true, message: 'Template created successfully' });
         }
-    });
+    } catch (error) {
+        console.error('Error saving invoice template:', error);
+        res.status(500).json({ success: false, error: 'Database error' });
+    }
 });
 
 // Get invoice data for order (public access for admin)
@@ -1399,9 +1448,15 @@ app.get('/api/orders/:orderId/invoice', (req, res) => {
                     return res.status(500).json({ success: false, message: 'Database error' });
                 }
 
+                // Format template data with full signature URL
+                const templateData = {
+                    ...template,
+                    signature_image: template.signature_image ? `https://bbqstyle.in/src/${template.signature_image}` : null
+                };
+                
                 // Format response with template data
                 const invoiceData = {
-                    template: template,
+                    template: templateData,
                     order: {
                         order_id: order.order_id,
                         order_date: order.order_date,

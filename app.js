@@ -3853,24 +3853,42 @@ app.put('/api/admin/orders/:orderId/pending', isAuthenticated, async (req, res) 
 // Update to Processing (sends confirmation email)
 app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, res) => {
     const orderId = req.params.orderId;
+    console.log(`Processing order ${orderId} - starting`);
     
     try {
+        console.log('Fetching order details...');
         const orderResult = await new Promise((resolve, reject) => {
             const query = `SELECT o.*, u.first_name, u.last_name, u.email FROM orders o JOIN users u ON o.user_id = u.user_id WHERE o.order_id = ?`;
             db.query(query, [orderId], (err, results) => {
-                if (err) reject(err);
-                else resolve(results[0]);
+                if (err) {
+                    console.error('DB error fetching order:', err);
+                    reject(err);
+                } else {
+                    console.log('Order found:', results[0] ? 'Yes' : 'No');
+                    if (results[0]) {
+                        console.log('Customer email:', results[0].email);
+                    }
+                    resolve(results[0]);
+                }
             });
         });
         
+        console.log('Updating order status to processing...');
         await new Promise((resolve, reject) => {
             db.query('UPDATE orders SET status = "processing" WHERE order_id = ?', [orderId], (err) => {
-                if (err) reject(err);
-                else resolve();
+                if (err) {
+                    console.error('DB error updating status:', err);
+                    reject(err);
+                } else {
+                    console.log('Order status updated successfully');
+                    resolve();
+                }
             });
         });
         
         if (orderResult && orderResult.email) {
+            console.log(`Sending confirmation email to: ${orderResult.email}`);
+            
             const emailHtml = `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white;">
                     <div style="text-align: center; padding: 20px; background: #c3a4c6;">
@@ -3906,7 +3924,23 @@ app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, re
                 </div>
             `;
             
-            await sendEmail(orderResult.email, `Order Confirmed - #${orderId}`, emailHtml);
+            try {
+                const emailResult = await sendEmail(orderResult.email, `Order Confirmed - #${orderId}`, emailHtml);
+                console.log('Email send result:', emailResult);
+                
+                if (emailResult.success) {
+                    console.log('Email sent successfully!');
+                } else {
+                    console.error('Email failed:', emailResult.error);
+                }
+            } catch (emailError) {
+                console.error('Email sending error:', emailError);
+            }
+        } else {
+            console.log('No email to send - missing order result or email address');
+            if (orderResult) {
+                console.log('Order result exists but email is:', orderResult.email);
+            }
         }
         
         res.json({ success: true, message: 'Order confirmed and email sent' });

@@ -1241,26 +1241,46 @@ const signatureUpload = multer({
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-// Get invoice template
-app.get('/api/admin/invoice-template', isAuthenticated, (req, res) => {
-    const query = 'SELECT * FROM invoice_template ORDER BY id DESC LIMIT 1';
+// Get all invoice templates
+app.get('/api/admin/invoice-templates', isAuthenticated, (req, res) => {
+    const query = 'SELECT id, company_name FROM invoice_template ORDER BY id DESC';
     
     db.query(query, (err, results) => {
+        if (err) {
+            console.error('Error fetching invoice templates:', err);
+            return res.status(500).json({ success: false, error: 'Database error' });
+        }
+        
+        res.json({ success: true, templates: results });
+    });
+});
+
+// Get specific invoice template
+app.get('/api/admin/invoice-template/:id', isAuthenticated, (req, res) => {
+    const templateId = req.params.id;
+    const query = 'SELECT * FROM invoice_template WHERE id = ?';
+    
+    db.query(query, [templateId], (err, results) => {
         if (err) {
             console.error('Error fetching invoice template:', err);
             return res.status(500).json({ success: false, error: 'Database error' });
         }
         
         if (results.length > 0) {
-            res.json({ success: true, template: results[0] });
+            const template = results[0];
+            if (template.signature_image) {
+                template.signature_image_url = `https://bbqstyle.in/src/${template.signature_image}`;
+            }
+            res.json({ success: true, template: template });
         } else {
-            res.json({ success: false, message: 'No template found' });
+            res.json({ success: false, message: 'Template not found' });
         }
     });
 });
 
 // Save/Update invoice template
-app.post('/api/admin/invoice-template', isAuthenticated, signatureUpload.single('signature_image'), async (req, res) => {
+app.post('/api/admin/invoice-template/:id?', isAuthenticated, signatureUpload.single('signature_image'), async (req, res) => {
+    const templateId = req.params.id;
     const {
         company_name,
         invoice_prefix,
@@ -1274,20 +1294,20 @@ app.post('/api/admin/invoice-template', isAuthenticated, signatureUpload.single(
     } = req.body;
 
     try {
-        // Check if template exists
-        const existing = await new Promise((resolve, reject) => {
-            db.query('SELECT id FROM invoice_template LIMIT 1', (err, results) => {
-                if (err) reject(err);
-                else resolve(results);
-            });
-        });
-        
-        let templateId;
         let signature_image = null;
         
-        if (existing.length > 0) {
-            templateId = existing[0].id;
+        if (templateId) {
+            // Update existing template
+            const existing = await new Promise((resolve, reject) => {
+                db.query('SELECT id FROM invoice_template WHERE id = ?', [templateId], (err, results) => {
+                    if (err) reject(err);
+                    else resolve(results);
+                });
+            });
             
+            if (existing.length === 0) {
+                return res.status(404).json({ success: false, error: 'Template not found' });
+            }
             // Handle signature image upload
             if (req.file) {
                 const signatureFilename = `sign${templateId}.png`;
@@ -1338,7 +1358,7 @@ app.post('/api/admin/invoice-template', isAuthenticated, signatureUpload.single(
                 });
             });
             
-            res.json({ success: true, message: 'Template updated successfully' });
+            res.json({ success: true, message: 'Template updated successfully', templateId: templateId });
         } else {
             // Insert new template first to get ID
             const insertResult = await new Promise((resolve, reject) => {
@@ -1386,7 +1406,7 @@ app.post('/api/admin/invoice-template', isAuthenticated, signatureUpload.single(
                 });
             }
             
-            res.json({ success: true, message: 'Template created successfully' });
+            res.json({ success: true, message: 'Template created successfully', templateId: templateId });
         }
     } catch (error) {
         console.error('Error saving invoice template:', error);

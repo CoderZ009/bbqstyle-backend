@@ -379,8 +379,11 @@ app.use('/api/*', (req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-// Serve static files with absolute URLs for admin subdomain
+// Serve static files with CORS headers for admin subdomain
 app.use('/uploads', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     if (req.get('host') && req.get('host').includes('admin.bbqstyle.in')) {
         return res.redirect(`https://bbqstyle.in${req.originalUrl}`);
     }
@@ -388,6 +391,9 @@ app.use('/uploads', (req, res, next) => {
 }, express.static(path.join(__dirname, 'public', 'uploads')));
 
 app.use('/src', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     if (req.get('host') && req.get('host').includes('admin.bbqstyle.in')) {
         return res.redirect(`https://bbqstyle.in${req.originalUrl}`);
     }
@@ -395,6 +401,9 @@ app.use('/src', (req, res, next) => {
 }, express.static(path.join(__dirname, 'src')));
 
 app.use('/src/categories', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     if (req.get('host') && req.get('host').includes('admin.bbqstyle.in')) {
         return res.redirect(`https://bbqstyle.in${req.originalUrl}`);
     }
@@ -402,6 +411,9 @@ app.use('/src/categories', (req, res, next) => {
 }, express.static(path.join(__dirname, 'src', 'categories')));
 
 app.use('/src/collections', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     if (req.get('host') && req.get('host').includes('admin.bbqstyle.in')) {
         return res.redirect(`https://bbqstyle.in${req.originalUrl}`);
     }
@@ -409,6 +421,9 @@ app.use('/src/collections', (req, res, next) => {
 }, express.static(path.join(__dirname, 'src', 'collections')));
 
 app.use('/src/slides', (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     if (req.get('host') && req.get('host').includes('admin.bbqstyle.in')) {
         return res.redirect(`https://bbqstyle.in${req.originalUrl}`);
     }

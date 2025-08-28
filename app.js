@@ -4029,8 +4029,7 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
         });
         
         await new Promise((resolve, reject) => {
-            db.query('UPDATE orders SET status = "shipped" WHERE order_id = ?', 
-                [trackingId || '', trackingLink || '', carrier || '', orderId], (err) => {
+            db.query('UPDATE orders SET status = "shipped" WHERE order_id = ?', [orderId], (err) => {
                 if (err) reject(err);
                 else resolve();
             });
@@ -4050,12 +4049,13 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
                             <h3 style="margin: 0 0 15px 0; color: #495057;">Shipping Details:</h3>
                             <p><strong>Order ID:</strong> #${orderId}</p>
                             <p><strong>Status:</strong> SHIPPED</p>
-                            <p><strong>Carrier:</strong> ${carrier || 'Standard Delivery'}</p>
-                            <p><strong>AWB Number:</strong> ${trackingId || 'Will be updated soon'}</p>
+                            <p><strong>Carrier:</strong> ${orderResult.carrier || 'Standard Delivery'}</p>
+                            <p><strong>AWB Number:</strong> ${orderResult.tracking_id || 'Will be updated soon'}</p>
+                            <p><strong>Total Amount:</strong> ₹${orderResult.total_amount}</p>
                         </div>
-                        ${trackingLink ? `
+                        ${orderResult.tracking_link ? `
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="${trackingLink}" style="background: #007bff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">🔍 Track Your Order</a>
+                            <a href="${orderResult.tracking_link}" target="_blank" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600; box-shadow: 0 4px 12px rgba(0,123,255,0.3); font-size: 16px;">🔍 Track Your Order</a>
                         </div>
                         ` : ''}
                         <p>You'll receive your order soon. Thank you for your patience!</p>

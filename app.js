@@ -91,11 +91,18 @@ const app = express();
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+    console.log('Health check called at:', new Date().toISOString());
     res.status(200).json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
+});
+
+// Test endpoint for debugging
+app.get('/api/test-log', (req, res) => {
+    console.log('TEST LOG ENDPOINT CALLED - Server is receiving requests');
+    res.json({ message: 'Server is working', timestamp: new Date().toISOString() });
 });
 
 // Simple email test endpoint (no auth for debugging)
@@ -4022,7 +4029,7 @@ app.put('/api/admin/orders/:orderId/shipped', isAuthenticated, async (req, res) 
         });
         
         await new Promise((resolve, reject) => {
-            db.query('UPDATE orders SET status = "shipped", tracking_id = ?, tracking_link = ?, carrier = ? WHERE order_id = ?', 
+            db.query('UPDATE orders SET status = "shipped" WHERE order_id = ?', 
                 [trackingId || '', trackingLink || '', carrier || '', orderId], (err) => {
                 if (err) reject(err);
                 else resolve();
@@ -7525,6 +7532,8 @@ app.put('/api/admin/orders/:orderId', isAuthenticated, (req, res) => {
         res.json({ success: true, message: 'Order updated successfully' });
     });
 });
+
+
 
 app.get('/api/admin/orders/:orderId/address', isAuthenticated, (req, res) => {
     const orderId = req.params.orderId;

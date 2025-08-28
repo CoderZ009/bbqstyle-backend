@@ -1215,84 +1215,225 @@ app.get('/api/user-profile', authenticateToken, (req, res) => {
     });
 });
 
+// Invoice Template Management APIs
+
+// Configure multer for signature image upload
+const signatureStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, 'public', 'uploads', 'signatures');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'signature-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const signatureUpload = multer({ 
+    storage: signatureStorage,
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed'), false);
+        }
+    },
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+// Get invoice template
+app.get('/api/admin/invoice-template', isAuthenticated, (req, res) => {
+    const query = 'SELECT * FROM invoice_template ORDER BY id DESC LIMIT 1';
+    
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('Error fetching invoice template:', err);
+            return res.status(500).json({ success: false, error: 'Database error' });
+        }
+        
+        if (results.length > 0) {
+            res.json({ success: true, template: results[0] });
+        } else {
+            res.json({ success: false, message: 'No template found' });
+        }
+    });
+});
+
+// Save/Update invoice template
+app.post('/api/admin/invoice-template', isAuthenticated, signatureUpload.single('signature_image'), (req, res) => {
+    const {
+        company_name,
+        invoice_prefix,
+        company_email,
+        company_phone,
+        company_gstin,
+        company_address,
+        invoice_footer,
+        invoice_terms,
+        invoice_theme
+    } = req.body;
+
+    let signature_image = null;
+    if (req.file) {
+        signature_image = '/uploads/signatures/' + req.file.filename;
+    }
+
+    // Check if template exists
+    db.query('SELECT id FROM invoice_template LIMIT 1', (err, existing) => {
+        if (err) {
+            console.error('Error checking existing template:', err);
+            return res.status(500).json({ success: false, error: 'Database error' });
+        }
+        
+        if (existing.length > 0) {
+            // Update existing template
+            let updateQuery = `
+                UPDATE invoice_template SET 
+                company_name = ?, 
+                invoice_prefix = ?, 
+                company_email = ?, 
+                company_phone = ?, 
+                company_gstin = ?, 
+                company_address = ?, 
+                invoice_footer = ?, 
+                invoice_terms = ?, 
+                invoice_theme = ?
+            `;
+            let updateParams = [
+                company_name, invoice_prefix, company_email, company_phone,
+                company_gstin, company_address, invoice_footer, invoice_terms, invoice_theme
+            ];
+            
+            if (signature_image) {
+                updateQuery += ', signature_image = ?';
+                updateParams.push(signature_image);
+            }
+            
+            updateQuery += ' WHERE id = ?';
+            updateParams.push(existing[0].id);
+            
+            db.query(updateQuery, updateParams, (updateErr) => {
+                if (updateErr) {
+                    console.error('Error updating invoice template:', updateErr);
+                    return res.status(500).json({ success: false, error: 'Database error' });
+                }
+                res.json({ success: true, message: 'Template updated successfully' });
+            });
+        } else {
+            // Insert new template
+            db.query(`
+                INSERT INTO invoice_template (
+                    company_name, invoice_prefix, company_email, company_phone,
+                    company_gstin, company_address, invoice_footer, invoice_terms,
+                    invoice_theme, signature_image
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                company_name, invoice_prefix, company_email, company_phone,
+                company_gstin, company_address, invoice_footer, invoice_terms,
+                invoice_theme, signature_image
+            ], (insertErr) => {
+                if (insertErr) {
+                    console.error('Error inserting invoice template:', insertErr);
+                    return res.status(500).json({ success: false, error: 'Database error' });
+                }
+                res.json({ success: true, message: 'Template created successfully' });
+            });
+        }
+    });
+});
+
 // Get invoice data for order (public access for admin)
 app.get('/api/orders/:orderId/invoice', (req, res) => {
     const orderId = req.params.orderId;
 
-    // Get order details with customer info
-    const orderQuery = `
-        SELECT o.*, a.full_name, a.mobile_no, a.address_line1, a.address_line2, 
-               a.city, a.state, a.pincode, u.email
-        FROM orders o
-        LEFT JOIN addresses a ON o.address_id = a.address_id
-        LEFT JOIN users u ON o.user_id = u.user_id
-        WHERE o.order_id = ?
-    `;
-
-    db.query(orderQuery, [orderId], (err, orderResults) => {
-        if (err) {
-            console.error('Database error fetching order:', err);
-            return res.status(500).json({ success: false, message: 'Database error' });
+    // Get template first
+    db.query('SELECT * FROM invoice_template ORDER BY id DESC LIMIT 1', (templateErr, templateResults) => {
+        if (templateErr) {
+            console.error('Database error fetching template:', templateErr);
+            return res.status(500).json({ success: false, error: 'Template not found' });
         }
-        if (orderResults.length === 0) {
-            return res.status(404).json({ success: false, message: 'Order not found' });
+        
+        if (templateResults.length === 0) {
+            return res.status(404).json({ success: false, error: 'Invoice template not found' });
         }
+        
+        const template = templateResults[0];
 
-        const order = orderResults[0];
-
-        // Get order items
-        const itemsQuery = `
-            SELECT oi.*, p.title, p.hsn
-            FROM order_items oi
-            LEFT JOIN products p ON oi.product_id = p.product_id
-            WHERE oi.order_id = ?
+        // Get order details with customer info
+        const orderQuery = `
+            SELECT o.*, a.full_name, a.mobile_no, a.address_line1, a.address_line2, 
+                   a.city, a.state, a.pincode, u.email
+            FROM orders o
+            LEFT JOIN addresses a ON o.address_id = a.address_id
+            LEFT JOIN users u ON o.user_id = u.user_id
+            WHERE o.order_id = ?
         `;
 
-        db.query(itemsQuery, [orderId], (itemsErr, itemsResults) => {
-            if (itemsErr) {
-                console.error('Database error fetching order items:', itemsErr);
+        db.query(orderQuery, [orderId], (err, orderResults) => {
+            if (err) {
+                console.error('Database error fetching order:', err);
                 return res.status(500).json({ success: false, message: 'Database error' });
             }
+            if (orderResults.length === 0) {
+                return res.status(404).json({ success: false, message: 'Order not found' });
+            }
 
-            const invoice = {
-                company: {
-                    name: 'BBQSTYLE',
-                    address: 'Kolkata, West Bengal, India',
-                    gstin: '19AABCU9603R1ZM',
-                    email: 'support@bbqstyle.in',
-                    phone: '+91 8901551059'
-                },
-                order: {
-                    order_id: order.order_id,
-                    order_date: order.order_date,
-                    payment_mode: order.payment_mode || 'COD',
-                    subtotal: order.subtotal || order.total_amount,
-                    discount: order.discount || 0,
-                    total_amount: order.total_amount
-                },
-                customer: {
-                    name: order.full_name || 'Customer',
-                    mobile: order.mobile_no || 'N/A',
-                    email: order.email || 'N/A',
-                    address: {
-                        line1: order.address_line1 || 'N/A',
-                        line2: order.address_line2 || '',
-                        city: order.city || 'N/A',
-                        state: order.state || 'N/A',
-                        pincode: order.pincode || 'N/A'
-                    }
-                },
-                items: itemsResults.map(item => ({
-                    title: item.title || 'Product',
-                    variant_detail: item.variant_detail || '',
-                    hsn: item.hsn || '61091000',
-                    quantity: item.quantity,
-                    price: item.price,
-                    total: item.price * item.quantity
-                }))
-            };
+            const order = orderResults[0];
 
-            res.json({ success: true, invoice });
+            // Get order items
+            const itemsQuery = `
+                SELECT oi.*, p.title, p.hsn, pi.image_path
+                FROM order_items oi
+                LEFT JOIN products p ON oi.product_id = p.product_id
+                LEFT JOIN product_images pi ON oi.product_id = pi.product_id AND pi.variant_detail = oi.variant_detail
+                WHERE oi.order_id = ?
+                GROUP BY oi.order_item_id
+            `;
+
+            db.query(itemsQuery, [orderId], (itemsErr, itemsResults) => {
+                if (itemsErr) {
+                    console.error('Database error fetching order items:', itemsErr);
+                    return res.status(500).json({ success: false, message: 'Database error' });
+                }
+
+                // Format response with template data
+                const invoiceData = {
+                    template: template,
+                    order: {
+                        order_id: order.order_id,
+                        order_date: order.order_date,
+                        payment_mode: order.payment_mode || 'COD',
+                        subtotal: order.subtotal || order.total_amount,
+                        discount: order.discount || 0,
+                        total_amount: order.total_amount
+                    },
+                    customer: {
+                        name: order.full_name || 'Customer',
+                        email: order.email || 'N/A',
+                        mobile: order.mobile_no || 'N/A',
+                        address: {
+                            line1: order.address_line1 || 'N/A',
+                            line2: order.address_line2 || '',
+                            city: order.city || 'N/A',
+                            state: order.state || 'N/A',
+                            pincode: order.pincode || 'N/A'
+                        }
+                    },
+                    items: itemsResults.map(item => ({
+                        title: item.title || 'Product',
+                        hsn: item.hsn || '61091000',
+                        quantity: item.quantity,
+                        price: item.price,
+                        total: item.quantity * item.price,
+                        variant_detail: item.variant_detail
+                    }))
+                };
+
+                res.json({ success: true, invoice: invoiceData });
+            });
         });
     });
 });

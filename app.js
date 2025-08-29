@@ -95,7 +95,19 @@ app.get('/health', (req, res) => {
     res.status(200).json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development'
+        environment: process.env.NODE_ENV || 'development',
+        uptime: process.uptime(),
+        memory: process.memoryUsage()
+    });
+});
+
+// Wake up endpoint
+app.get('/wake', (req, res) => {
+    console.log('Wake up call received at:', new Date().toISOString());
+    res.status(200).json({ 
+        status: 'AWAKE', 
+        message: 'Server is awake and running',
+        timestamp: new Date().toISOString()
     });
 });
 
@@ -294,16 +306,34 @@ setInterval(async () => {
     }
 }, 60 * 1000); // Check every minute
 
-// Keep Render server awake by pinging collections endpoint every 12 minutes
+// Keep Render server awake with multiple strategies
 setInterval(async () => {
     try {
         const url = process.env.BASE_URL || 'https://bbqstyle-backend.onrender.com';
-        const response = await axios.get(`${url}/api/public/collections`);
-        console.log(`Keep-alive ping successful: ${response.status}`);
+        const response = await axios.get(`${url}/health`);
+        console.log(`Keep-alive ping successful: ${response.status} at ${new Date().toISOString()}`);
     } catch (error) {
         console.log('Keep-alive ping failed:', error.message);
+        // Try alternative endpoint
+        try {
+            const altResponse = await axios.get(`${url}/api/public/collections`);
+            console.log(`Alternative keep-alive successful: ${altResponse.status}`);
+        } catch (altError) {
+            console.log('All keep-alive attempts failed');
+        }
     }
-}, 12 * 60 * 1000); // 12 minutes
+}, 10 * 60 * 1000); // 10 minutes
+
+// Additional keep-alive with shorter interval
+setInterval(async () => {
+    try {
+        const url = process.env.BASE_URL || 'https://bbqstyle-backend.onrender.com';
+        await axios.get(`${url}/health`, { timeout: 5000 });
+        console.log(`Quick ping: ${new Date().toLocaleTimeString()}`);
+    } catch (error) {
+        console.log('Quick ping failed:', error.message);
+    }
+}, 5 * 60 * 1000); // 5 minutes
 
 const port = process.env.PORT || 3000;
 
@@ -405,7 +435,16 @@ app.use((req, res, next) => {
 
 // Serve static files with CORS headers
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
-app.use('/src', express.static(path.join(__dirname, 'src')));
+app.use('/src', (req, res, next) => {
+    const allowedOrigins = ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000', 'https://www.bbqstyle.in'];
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+}, express.static(path.join(__dirname, 'src')));
 app.use('/src/categories', express.static(path.join(__dirname, 'src', 'categories')));
 app.use('/src/collections', express.static(path.join(__dirname, 'src', 'collections')));
 app.use('/src/slides', express.static(path.join(__dirname, 'src', 'slides')));

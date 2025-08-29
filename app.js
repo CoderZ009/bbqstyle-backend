@@ -473,7 +473,7 @@ app.get('/logos.png', (req, res) => {
 });
 
 // Serve signature images with proper headers
-app.get('/sign:templateId.png', (req, res) => {
+app.get('/sign*.png', (req, res) => {
     const allowedOrigins = ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000', 'https://www.bbqstyle.in'];
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
@@ -481,8 +481,8 @@ app.get('/sign:templateId.png', (req, res) => {
     } else {
         res.header('Access-Control-Allow-Origin', '*');
     }
-    const templateId = req.params.templateId;
-    res.sendFile(path.join(__dirname, 'src', `sign${templateId}.png`), (err) => {
+    const filename = req.path.substring(1); // Remove leading slash
+    res.sendFile(path.join(__dirname, 'src', filename), (err) => {
         if (err) {
             res.status(404).end();
         }
@@ -1479,6 +1479,20 @@ app.post('/api/admin/invoice-template/:id?', isAuthenticated, signatureUpload.si
     } catch (error) {
         console.error('Error saving invoice template:', error);
         res.status(500).json({ success: false, error: 'Database error' });
+    }
+});
+
+// Image proxy endpoint for admin to avoid CORS issues
+app.get('/api/admin/image-proxy/:imageName', isAuthenticated, (req, res) => {
+    const imageName = req.params.imageName;
+    const imagePath = path.join(__dirname, 'src', imageName);
+    
+    if (fs.existsSync(imagePath)) {
+        const imageBuffer = fs.readFileSync(imagePath);
+        const base64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+        res.json({ success: true, base64 });
+    } else {
+        res.status(404).json({ success: false, error: 'Image not found' });
     }
 });
 

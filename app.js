@@ -458,7 +458,13 @@ app.get('/favicon.ico', (req, res) => {
 
 // Serve logos.png with proper headers
 app.get('/logos.png', (req, res) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    const allowedOrigins = ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000', 'https://www.bbqstyle.in'];
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    } else {
+        res.header('Access-Control-Allow-Origin', '*');
+    }
     res.sendFile(path.join(__dirname, 'src', 'logos.png'), (err) => {
         if (err) {
             res.status(404).end();
@@ -468,7 +474,13 @@ app.get('/logos.png', (req, res) => {
 
 // Serve signature images with proper headers
 app.get('/sign:templateId.png', (req, res) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    const allowedOrigins = ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000', 'https://www.bbqstyle.in'];
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    } else {
+        res.header('Access-Control-Allow-Origin', '*');
+    }
     const templateId = req.params.templateId;
     res.sendFile(path.join(__dirname, 'src', `sign${templateId}.png`), (err) => {
         if (err) {

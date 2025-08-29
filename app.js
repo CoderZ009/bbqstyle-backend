@@ -368,7 +368,7 @@ app.use('/api/*', (req, res, next) => {
     if (allowedOrigins.includes(origin)) {
         res.header('Access-Control-Allow-Origin', origin);
     } else {
-        res.header('Access-Control-Allow-Origin', '*');
+        res.header('Access-Control-Allow-Origin', 'https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000', 'https://www.bbqstyle.in');
     }
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
@@ -384,7 +384,13 @@ app.use(cookieParser());
 // Comprehensive CORS middleware for all static files
 app.use((req, res, next) => {
     // Set CORS headers for all requests
-    res.header('Access-Control-Allow-Origin', '*');
+    const allowedOrigins = ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000', 'https://www.bbqstyle.in'];
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    } else {
+        res.header('Access-Control-Allow-Origin', 'https://bbqstyle.in');
+    }
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
     res.header('Access-Control-Allow-Credentials', 'true');

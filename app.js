@@ -456,37 +456,35 @@ app.get('/favicon.ico', (req, res) => {
     });
 });
 
-// Serve logos.png with proper headers
-app.get('/logos.png', (req, res) => {
-    const allowedOrigins = ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000', 'https://www.bbqstyle.in'];
-    const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
-        res.header('Access-Control-Allow-Origin', origin);
-    } else {
-        res.header('Access-Control-Allow-Origin', '*');
+// FTP image endpoint for invoice generation
+app.get('/api/admin/ftp-image/:imageName', isAuthenticated, async (req, res) => {
+    const imageName = req.params.imageName;
+    const client = new ftp.Client();
+    
+    try {
+        await client.access({
+            host: process.env.FTP_HOST,
+            user: process.env.FTP_USER,
+            password: process.env.FTP_PASSWORD,
+            secure: false,
+            port: 21
+        });
+        
+        const tempPath = path.join(__dirname, 'temp', imageName);
+        await client.downloadTo(tempPath, `/src/${imageName}`);
+        
+        const imageBuffer = fs.readFileSync(tempPath);
+        const base64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+        
+        fs.unlinkSync(tempPath);
+        client.close();
+        
+        res.json({ success: true, base64 });
+    } catch (error) {
+        console.error('FTP image error:', error);
+        client.close();
+        res.status(404).json({ success: false, error: 'Image not found' });
     }
-    res.sendFile(path.join(__dirname, 'src', 'logos.png'), (err) => {
-        if (err) {
-            res.status(404).end();
-        }
-    });
-});
-
-// Serve signature images with proper headers
-app.get('/sign*.png', (req, res) => {
-    const allowedOrigins = ['https://bbqstyle.in', 'https://admin.bbqstyle.in', 'http://localhost:3000', 'https://www.bbqstyle.in'];
-    const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
-        res.header('Access-Control-Allow-Origin', origin);
-    } else {
-        res.header('Access-Control-Allow-Origin', '*');
-    }
-    const filename = req.path.substring(1); // Remove leading slash
-    res.sendFile(path.join(__dirname, 'src', filename), (err) => {
-        if (err) {
-            res.status(404).end();
-        }
-    });
 });
 // Block access to admin folder from main domain
 app.get('/admin*', (req, res, next) => {
@@ -1482,19 +1480,7 @@ app.post('/api/admin/invoice-template/:id?', isAuthenticated, signatureUpload.si
     }
 });
 
-// Image proxy endpoint for admin to avoid CORS issues
-app.get('/api/admin/image-proxy/:imageName', isAuthenticated, (req, res) => {
-    const imageName = req.params.imageName;
-    const imagePath = path.join(__dirname, 'src', imageName);
-    
-    if (fs.existsSync(imagePath)) {
-        const imageBuffer = fs.readFileSync(imagePath);
-        const base64 = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-        res.json({ success: true, base64 });
-    } else {
-        res.status(404).json({ success: false, error: 'Image not found' });
-    }
-});
+
 
 // Get invoice data for order (public access for admin)
 app.get('/api/orders/:orderId/invoice', (req, res) => {

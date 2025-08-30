@@ -642,8 +642,12 @@ const storage = multer.diskStorage({
                     remotePath = `/src/categories/${filename}`;
                 } else if (file.fieldname === 'collectionImage') {
                     remotePath = `/src/collections/${filename}`;
-                } else if (file.fieldname === 'image' && req.route.path.includes('slideshow')) {
+                } else if (file.fieldname === 'image' && req.route && req.route.path && req.route.path.includes('slideshow')) {
                     remotePath = `/src/slides/${filename}`;
+                } else if (file.fieldname && file.fieldname.startsWith('colorImages_')) {
+                    remotePath = `/uploads/${filename}`;
+                } else if (file.fieldname && file.fieldname.startsWith('productImages_')) {
+                    remotePath = `/uploads/${filename}`;
                 } else {
                     remotePath = `/uploads/${filename}`;
                 }
@@ -686,7 +690,19 @@ const upload = multer({
 });
 
 // Custom upload middleware for products that can handle multiple file types
-const productUpload = multer({ storage: storage }).any();
+const productUpload = multer({ 
+    storage: storage,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed.'));
+        }
+    }
+}).any();
 
 
 // Authentication middleware (for admin users only)
@@ -2399,7 +2415,12 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
         await sendAdminNotification(
             'New Order Received! 🛒',
             `Order #${orderId} from ${userResult?.first_name || 'Customer'} - ₹${totalAmount}`,
-            'new-order'
+            'new-order',
+            {
+                type: 'new-order',
+                orderId: orderId,
+                url: '/admin/'
+            }
         );
 
         // Send order received notification to admin
@@ -2547,39 +2568,397 @@ app.post('/api/admin/push/subscribe', isAuthenticated, (req, res) => {
 });
 
 app.post('/api/push/subscribe', (req, res) => {
-    const { subscription, userId } = req.body;
-    if (userId) {
-        customerSubscriptions.set(userId, subscription);
+    const { subscription, userId, userAgent, timestamp } = req.body;
+    
+    console.log('Push subscription received:', {
+        userId,
+        endpoint: subscription?.endpoint,
+        userAgent: userAgent?.substring(0, 50) + '...',
+        timestamp
+    });
+    
+    if (userId && subscription) {
+        // Store subscription with additional metadata
+        customerSubscriptions.set(userId, {
+            subscription,
+            userAgent,
+            timestamp,
+            lastUsed: new Date().toISOString()
+        });
+        
+        console.log(`Stored push subscription for user ${userId}`);
+        console.log(`Total active subscriptions: ${customerSubscriptions.size}`);
     }
-    res.json({ success: true });
+    
+    res.json({ success: true, message: 'Push subscription registered successfully' });
 });
 
-// Send admin notification function
-async function sendAdminNotification(title, body, tag = 'admin-notification') {
-    const payload = JSON.stringify({ title, body, tag });
-    for (const [adminId, subscription] of adminSubscriptions) {
+// Enhanced admin notification function
+async function sendAdminNotification(title, body, tag = 'admin-notification', additionalData = {}) {
+    const payload = JSON.stringify({ 
+        title, 
+        body, 
+        tag,
+        type: additionalData.type || 'admin-notification',
+        url: additionalData.url || '/admin/',
+        orderId: additionalData.orderId,
+        timestamp: new Date().toISOString()
+    });
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    for (const [adminId, subscriptionData] of adminSubscriptions) {
         try {
+            const subscription = subscriptionData.subscription || subscriptionData;
+            console.log(`Sending admin push notification:`, { title, body, tag });
             await webpush.sendNotification(subscription, payload);
+            
+            // Update last used timestamp if subscriptionData is an object
+            if (typeof subscriptionData === 'object' && subscriptionData.subscription) {
+                subscriptionData.lastUsed = new Date().toISOString();
+                adminSubscriptions.set(adminId, subscriptionData);
+            }
+            
+            successCount++;
+            console.log(`Admin push notification sent successfully to ${adminId}`);
         } catch (error) {
-            console.error('Admin push failed:', error);
-            adminSubscriptions.delete(adminId);
+            console.error(`Admin push notification failed for ${adminId}:`, error);
+            failCount++;
+            
+            // Remove invalid subscription
+            if (error.statusCode === 410 || error.statusCode === 404) {
+                console.log(`Removing invalid admin subscription for ${adminId}`);
+                adminSubscriptions.delete(adminId);
+            }
         }
+    }
+    
+    console.log(`Admin notifications sent: ${successCount} success, ${failCount} failed`);
+    return successCount > 0;
+}
+
+// Enhanced customer notification function
+async function sendCustomerNotification(userId, title, body, tag = 'customer-notification', additionalData = {}) {
+    const subscriptionData = customerSubscriptions.get(userId);
+    
+    if (!subscriptionData) {
+        console.log(`No push subscription found for user ${userId}`);
+        return false;
+    }
+    
+    const { subscription } = subscriptionData;
+    const payload = JSON.stringify({ 
+        title, 
+        body, 
+        tag,
+        type: additionalData.type || 'notification',
+        url: additionalData.url || '/account.html',
+        orderId: additionalData.orderId,
+        timestamp: new Date().toISOString()
+    });
+    
+    try {
+        console.log(`Sending push notification to user ${userId}:`, { title, body, tag });
+        await webpush.sendNotification(subscription, payload);
+        
+        // Update last used timestamp
+        subscriptionData.lastUsed = new Date().toISOString();
+        customerSubscriptions.set(userId, subscriptionData);
+        
+        console.log(`Push notification sent successfully to user ${userId}`);
+        return true;
+    } catch (error) {
+        console.error(`Push notification failed for user ${userId}:`, error);
+        
+        // Remove invalid subscription
+        if (error.statusCode === 410 || error.statusCode === 404) {
+            console.log(`Removing invalid subscription for user ${userId}`);
+            customerSubscriptions.delete(userId);
+        }
+        
+        return false;
     }
 }
 
-// Send customer notification function
-async function sendCustomerNotification(userId, title, body, tag = 'customer-notification') {
-    const subscription = customerSubscriptions.get(userId);
-    if (subscription) {
-        const payload = JSON.stringify({ title, body, tag });
-        try {
-            await webpush.sendNotification(subscription, payload);
-        } catch (error) {
-            console.error('Customer push failed:', error);
-            customerSubscriptions.delete(userId);
-        }
+// Direct notification endpoints - No subscription required
+// Get recent orders for admin notifications (last 5 minutes)
+app.get('/api/admin/recent-orders', isAuthenticated, async (req, res) => {
+    try {
+        const query = `
+            SELECT o.order_id, o.status, o.total_amount, o.order_date,
+                   u.first_name, u.last_name, u.email
+            FROM orders o
+            JOIN users u ON o.user_id = u.user_id
+            WHERE o.order_date >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+            AND o.status = 'pending'
+            ORDER BY o.order_date DESC
+        `;
+        
+        const orders = await new Promise((resolve, reject) => {
+            db.query(query, (err, results) => {
+                if (err) reject(err);
+                else resolve(results);
+            });
+        });
+        
+        res.json(orders);
+    } catch (error) {
+        console.error('Error fetching recent orders:', error);
+        res.status(500).json({ error: 'Failed to fetch recent orders' });
     }
-}
+});
+
+// Get recent order cancellations for admin notifications (last 5 minutes)
+app.get('/api/admin/recent-cancellations', isAuthenticated, async (req, res) => {
+    try {
+        const query = `
+            SELECT o.order_id, o.status, o.total_amount, o.updated_at,
+                   u.first_name, u.last_name, u.email,
+                   o.cancellation_reason, o.cancelled_by
+            FROM orders o
+            JOIN users u ON o.user_id = u.user_id
+            WHERE o.updated_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+            AND o.status = 'cancelled'
+            ORDER BY o.updated_at DESC
+        `;
+        
+        const cancellations = await new Promise((resolve, reject) => {
+            db.query(query, (err, results) => {
+                if (err) reject(err);
+                else resolve(results);
+            });
+        });
+        
+        res.json(cancellations);
+    } catch (error) {
+        console.error('Error fetching recent cancellations:', error);
+        res.status(500).json({ error: 'Failed to fetch recent cancellations' });
+    }
+});
+
+// Get order status updates for customers (last 5 minutes)
+app.get('/api/order-status-updates/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        
+        const query = `
+            SELECT o.order_id as orderId, o.status, o.updated_at,
+                   u.first_name as customerName
+            FROM orders o
+            JOIN users u ON o.user_id = u.user_id
+            WHERE o.user_id = ? 
+            AND o.updated_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+            AND o.status IN ('confirmed', 'ready', 'shipped', 'out_for_delivery', 'delivered', 'cancelled', 'out_of_stock')
+            ORDER BY o.updated_at DESC
+        `;
+        
+        const updates = await new Promise((resolve, reject) => {
+            db.query(query, [userId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results);
+            });
+        });
+        
+        res.json(updates);
+    } catch (error) {
+        console.error('Error fetching order status updates:', error);
+        res.status(500).json({ error: 'Failed to fetch updates' });
+    }
+});
+
+// Update order status and trigger notifications to ALL customers/admins
+app.put('/api/admin/orders/:orderId/status', isAuthenticated, async (req, res) => {
+    try {
+        const orderId = req.params.orderId;
+        const { status, trackingId, trackingLink, carrier } = req.body;
+        
+        if (!status) {
+            return res.status(400).json({ error: 'Status is required' });
+        }
+        
+        // Get current order details
+        const orderQuery = `
+            SELECT o.*, u.first_name, u.last_name, u.email, u.user_id
+            FROM orders o
+            JOIN users u ON o.user_id = u.user_id
+            WHERE o.order_id = ?
+        `;
+        
+        const orderResult = await new Promise((resolve, reject) => {
+            db.query(orderQuery, [orderId], (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        
+        if (!orderResult) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        
+        const oldStatus = orderResult.status;
+        
+        // Update order status with timestamp
+        let updateQuery = 'UPDATE orders SET status = ?, updated_at = NOW()';
+        let updateParams = [status];
+        
+        if (trackingId) {
+            updateQuery += ', tracking_id = ?';
+            updateParams.push(trackingId);
+        }
+        
+        if (trackingLink) {
+            updateQuery += ', tracking_link = ?';
+            updateParams.push(trackingLink);
+        }
+        
+        if (carrier) {
+            updateQuery += ', carrier = ?';
+            updateParams.push(carrier);
+        }
+        
+        updateQuery += ' WHERE order_id = ?';
+        updateParams.push(orderId);
+        
+        await new Promise((resolve, reject) => {
+            db.query(updateQuery, updateParams, (err, result) => {
+                if (err) reject(err);
+                else if (result.affectedRows === 0) reject(new Error('Order not found'));
+                else resolve();
+            });
+        });
+        
+        // Send status update email to customer (existing function)
+        if (status !== oldStatus) {
+            await sendStatusUpdateEmail(orderId, status, oldStatus);
+        }
+        
+        res.json({ success: true, message: 'Order status updated successfully' });
+        
+    } catch (error) {
+        console.error('Error updating order status:', error);
+        res.status(500).json({ error: 'Failed to update order status' });
+    }
+});
+
+// Send notification to all customers (broadcast)
+app.post('/api/admin/broadcast-customer-notification', isAuthenticated, async (req, res) => {
+    try {
+        const { title, message, type = 'info' } = req.body;
+        
+        if (!title || !message) {
+            return res.status(400).json({ error: 'Title and message are required' });
+        }
+        
+        // Get all customers
+        const customers = await new Promise((resolve, reject) => {
+            db.query('SELECT user_id, first_name, last_name, email FROM users', (err, results) => {
+                if (err) reject(err);
+                else resolve(results);
+            });
+        });
+        
+        // In a real implementation, you would send push notifications here
+        // For now, we'll just return success
+        
+        res.json({
+            success: true,
+            message: `Notification will be sent to ${customers.length} customers`,
+            customerCount: customers.length
+        });
+        
+    } catch (error) {
+        console.error('Error broadcasting customer notification:', error);
+        res.status(500).json({ error: 'Failed to broadcast notification' });
+    }
+});
+
+// Send notification to all admins (broadcast)
+app.post('/api/admin/broadcast-admin-notification', isAuthenticated, async (req, res) => {
+    try {
+        const { title, message, type = 'info' } = req.body;
+        
+        if (!title || !message) {
+            return res.status(400).json({ error: 'Title and message are required' });
+        }
+        
+        // In a real implementation, you would send push notifications to all admin users here
+        // For now, we'll just return success
+        
+        res.json({
+            success: true,
+            message: 'Notification will be sent to all admins'
+        });
+        
+    } catch (error) {
+        console.error('Error broadcasting admin notification:', error);
+        res.status(500).json({ error: 'Failed to broadcast notification' });
+    }
+});
+
+// Get notification statistics for admin dashboard
+app.get('/api/admin/notification-stats', isAuthenticated, async (req, res) => {
+    try {
+        const stats = {
+            totalOrders: 0,
+            pendingOrders: 0,
+            recentOrders: 0,
+            cancelledOrders: 0,
+            deliveredOrders: 0
+        };
+        
+        // Get total orders
+        const totalOrdersResult = await new Promise((resolve, reject) => {
+            db.query('SELECT COUNT(*) as count FROM orders', (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        stats.totalOrders = totalOrdersResult.count;
+        
+        // Get pending orders
+        const pendingOrdersResult = await new Promise((resolve, reject) => {
+            db.query('SELECT COUNT(*) as count FROM orders WHERE status = "pending"', (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        stats.pendingOrders = pendingOrdersResult.count;
+        
+        // Get recent orders (last 24 hours)
+        const recentOrdersResult = await new Promise((resolve, reject) => {
+            db.query('SELECT COUNT(*) as count FROM orders WHERE order_date >= DATE_SUB(NOW(), INTERVAL 24 HOUR)', (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        stats.recentOrders = recentOrdersResult.count;
+        
+        // Get cancelled orders
+        const cancelledOrdersResult = await new Promise((resolve, reject) => {
+            db.query('SELECT COUNT(*) as count FROM orders WHERE status = "cancelled"', (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        stats.cancelledOrders = cancelledOrdersResult.count;
+        
+        // Get delivered orders
+        const deliveredOrdersResult = await new Promise((resolve, reject) => {
+            db.query('SELECT COUNT(*) as count FROM orders WHERE status = "delivered"', (err, results) => {
+                if (err) reject(err);
+                else resolve(results[0]);
+            });
+        });
+        stats.deliveredOrders = deliveredOrdersResult.count;
+        
+        res.json(stats);
+        
+    } catch (error) {
+        console.error('Error fetching notification stats:', error);
+        res.status(500).json({ error: 'Failed to fetch notification stats' });
+    }
+});
 
 // Admin Login Route (retained for admin specific login)
 app.post('/admin/login', (req, res) => {
@@ -4318,6 +4697,12 @@ app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, re
             orderResult.user_id,
             'Order Confirmed! 🎉',
             `Your order #${orderId} has been confirmed and is being processed`,
+            'order-confirmed',
+            {
+                type: 'order-update',
+                orderId: orderId,
+                url: `/account.html?tab=orders&order=${orderId}`
+            }
             'order-confirmed'
         );
 

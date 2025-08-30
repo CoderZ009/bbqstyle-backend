@@ -9,6 +9,7 @@ const ftp = require('basic-ftp');
 const session = require('express-session');
 const Sequelize = require('sequelize');
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
+const webpush = require('web-push');
 
 // Initialize Sequelize
 const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
@@ -86,6 +87,17 @@ async function sendEmail(to, subject, html, text = null) {
 }
 
 console.log('Node.js server starting...'); // Added for debugging
+
+// Set VAPID details for web push
+webpush.setVapidDetails(
+    'mailto:hardevi143@gmail.com',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+);
+
+// Store subscriptions
+const adminSubscriptions = new Map();
+const customerSubscriptions = new Map();
 
 const app = express();
 
@@ -2383,6 +2395,13 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
             });
         });
 
+        // Send push notification to admin for new order
+        await sendAdminNotification(
+            'New Order Received! 🛒',
+            `Order #${orderId} from ${userResult?.first_name || 'Customer'} - ₹${totalAmount}`,
+            'new-order'
+        );
+
         // Send order received notification to admin
         try {
             const itemsHtml = orderItems.map(item => `
@@ -2519,6 +2538,48 @@ app.put('/api/addresses/:id', authenticateToken, (req, res) => {
         updateAddress();
     }
 });
+
+// Push notification endpoints
+app.post('/api/admin/push/subscribe', isAuthenticated, (req, res) => {
+    const { subscription } = req.body;
+    adminSubscriptions.set('admin', subscription);
+    res.json({ success: true });
+});
+
+app.post('/api/push/subscribe', (req, res) => {
+    const { subscription, userId } = req.body;
+    if (userId) {
+        customerSubscriptions.set(userId, subscription);
+    }
+    res.json({ success: true });
+});
+
+// Send admin notification function
+async function sendAdminNotification(title, body, tag = 'admin-notification') {
+    const payload = JSON.stringify({ title, body, tag });
+    for (const [adminId, subscription] of adminSubscriptions) {
+        try {
+            await webpush.sendNotification(subscription, payload);
+        } catch (error) {
+            console.error('Admin push failed:', error);
+            adminSubscriptions.delete(adminId);
+        }
+    }
+}
+
+// Send customer notification function
+async function sendCustomerNotification(userId, title, body, tag = 'customer-notification') {
+    const subscription = customerSubscriptions.get(userId);
+    if (subscription) {
+        const payload = JSON.stringify({ title, body, tag });
+        try {
+            await webpush.sendNotification(subscription, payload);
+        } catch (error) {
+            console.error('Customer push failed:', error);
+            customerSubscriptions.delete(userId);
+        }
+    }
+}
 
 // Admin Login Route (retained for admin specific login)
 app.post('/admin/login', (req, res) => {
@@ -2692,6 +2753,81 @@ app.post('/api/admin/send-newsletter', isAuthenticated, async (req, res) => {
     } catch (error) {
         console.error('Error sending newsletter:', error);
         res.status(500).json({ error: 'Failed to send newsletter' });
+    }
+});
+
+// Admin endpoint to send bulk emails to selected recipients
+app.post('/api/admin/send-bulk-email', isAuthenticated, async (req, res) => {
+    const { recipients, subject, htmlContent } = req.body;
+    
+    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        return res.status(400).json({ error: 'Recipients array is required' });
+    }
+    
+    if (!subject || !htmlContent) {
+        return res.status(400).json({ error: 'Subject and content are required' });
+    }
+
+    try {
+        const emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; overflow: hidden;">
+                <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #c3a4c6 0%, #b39bc0 100%);">
+                    <img src="https://bbqstyle.in/src/logos.png" alt="BBQSTYLE" style="max-width: 150px; height: auto;">
+                </div>
+                <div style="padding: 40px 30px;">
+                    ${htmlContent}
+                </div>
+                <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 30px 20px; text-align: center; border-top: 1px solid #dee2e6;">
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 15px 0; color: #495057; font-size: 18px; font-weight: 600;">Stay Connected</h3>
+                        <p style="margin: 0 0 20px 0; color: #6c757d;">Follow us for the latest updates and offers</p>
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; margin-bottom: 25px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="background: #007bff; color: white; width: 35px; height: 35px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">📧</span>
+                            <a href="mailto:support@bbqstyle.in" style="color: #007bff; text-decoration: none; font-weight: 600;">support@bbqstyle.in</a>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="background: #28a745; color: white; width: 35px; height: 35px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">📞</span>
+                            <a href="tel:+918901551059" style="color: #28a745; text-decoration: none; font-weight: 600;">+91 8901551059</a>
+                        </div>
+                    </div>
+                    <div style="border-top: 1px solid #dee2e6; padding-top: 20px;">
+                        <p style="margin: 0; color: #6c757d; font-size: 14px; font-weight: 600;">BBQSTYLE - India's Premium Clothing Store</p>
+                        <p style="margin: 5px 0 0 0; color: #adb5bd; font-size: 12px;">Crafting Style, Delivering Excellence</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const recipient of recipients) {
+            try {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const result = await sendEmail(recipient.email, subject, emailHtml);
+                if (result.success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (error) {
+                console.error(`Failed to send email to ${recipient.email}:`, error);
+                failCount++;
+            }
+        }
+
+        res.json({ 
+            success: true, 
+            message: `Bulk emails sent to ${successCount} recipients`, 
+            sent: successCount,
+            failed: failCount,
+            total: recipients.length
+        });
+    } catch (error) {
+        console.error('Error sending bulk emails:', error);
+        res.status(500).json({ error: 'Failed to send bulk emails' });
     }
 });
 
@@ -4177,6 +4313,14 @@ app.put('/api/admin/orders/:orderId/processing', isAuthenticated, async (req, re
             });
         });
         
+        // Send push notification to customer
+        await sendCustomerNotification(
+            orderResult.user_id,
+            'Order Confirmed! 🎉',
+            `Your order #${orderId} has been confirmed and is being processed`,
+            'order-confirmed'
+        );
+
         if (orderResult && orderResult.email) {
             console.log(`Sending confirmation email to: ${orderResult.email}`);
             
